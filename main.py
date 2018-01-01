@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn import preprocessing
 from sklearn.linear_model import LinearRegression
-
+from sklearn import cross_validation
 
 def pre_process_data():
     print("begin to read data")
@@ -95,9 +95,13 @@ def cal_MSE(y_predict, y_real):
     n = len(y_predict)
     print("样本数量:" + str(n))
     return np.sum(np.square(y_predict - y_real)) / n
+
 if __name__ == '__main__':
     x_train, y_train, x_test = pre_process_data()
     model = create_model(x_train, y_train)
+    print("交叉验证...")
+    scores = cross_validation.cross_val_score(model, x_train, y_train, cv = 10, scoring='neg_mean_squared_error')
+    print(scores)
     ans = model.predict(x_test)
     sub_df = pd.read_csv('train_test.csv', header=None)
     sub_df['Y'] = ans
