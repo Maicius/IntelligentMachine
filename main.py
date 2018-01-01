@@ -3,11 +3,14 @@
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
+from sklearn.linear_model import LinearRegression
 
 
 def pre_process_data():
     print("begin to read data")
     train_data = pd.read_excel('train.xlsx')
+    x_test = pd.read_excel('train.xlsx')
+
     # 去掉空行
     print("raw_data:" + str(train_data.shape))
     nan_data_value = remove_nan_data(train_data)
@@ -29,9 +32,12 @@ def pre_process_data():
     corr02 = corr_df[corr_df.corr_value >= 0.2]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
+    x_test = x_test[corr02_col]
+    x_test = normalize_data(x_test)
+    x_test.fillna(x_test.mean())
     print("Finish preprocess")
     print(x_train.shape, y_train.shape)
-    return x_train, y_train
+    return x_train.values, y_train.values, x_test.values
 
 
 def remove_nan_data(data):
@@ -78,5 +84,23 @@ def normalize_data(data):
     # return preprocessing.scale(data, axis=0)
 
 
+def create_model(x_train, y_train):
+    print("begin to train...")
+    model = LinearRegression()
+    model.fit(x_train, y_train)
+    return model
+
+
+def cal_MSE(y_predict, y_real):
+    n = len(y_predict)
+    print("样本数量:" + str(n))
+    return np.sum(np.square(y_predict - y_real)) / n
 if __name__ == '__main__':
-    x_train, y_train = pre_process_data()
+    x_train, y_train, x_test = pre_process_data()
+    model = create_model(x_train, y_train)
+    ans = model.predict(x_test)
+    sub_df = pd.read_csv('train_test.csv', header=None)
+    sub_df['Y'] = ans
+    sub_df.to_csv('final_test.csv', header=None, index=False)
+    print("MSE:")
+    print(cal_MSE(ans, y_train))
