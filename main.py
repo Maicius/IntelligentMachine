@@ -4,7 +4,9 @@ import pandas as pd
 import numpy as np
 from sklearn import preprocessing
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Lasso
 from sklearn import cross_validation
+from sklearn.linear_model import SGDRegressor
 
 def pre_process_data():
     print("begin to read data")
@@ -44,7 +46,7 @@ def remove_nan_data(data):
     nan_data = data.isnull().sum(axis=0).reset_index()
     nan_data.columns = ['col', 'nan_count']
     nan_data = nan_data.sort_values(by='nan_count')
-    nan_data_value = nan_data[nan_data.nan_count > 200].col.values
+    nan_data_value = nan_data[nan_data.nan_count > 20].col.values
     print("nan_data_value:" + str(nan_data_value))
     return nan_data_value
 
@@ -53,7 +55,7 @@ def remove_nan_data(data):
 def remove_no_float(data):
     data_type = data.dtypes.reset_index()
     data_type.columns = ['col', 'dtype']
-    return data_type[data_type.dtype != 'object'].col.values
+    return data_type[data_type.dtype == 'float64'].col.values
 
 
 # 计算协方差
@@ -86,7 +88,7 @@ def normalize_data(data):
 
 def create_model(x_train, y_train):
     print("begin to train...")
-    model = LinearRegression()
+    model = Lasso(0.2)
     model.fit(x_train, y_train)
     return model
 
@@ -98,9 +100,13 @@ def cal_MSE(y_predict, y_real):
 
 if __name__ == '__main__':
     x_train, y_train, x_test = pre_process_data()
+    x_train.to_csv('x_train.csv')
+    y_train.to_csv('y_train.csv')
+    x_test.to_csv('x_test.csv')
+
     model = create_model(x_train, y_train)
     print("交叉验证...")
-    scores = cross_validation.cross_val_score(model, x_train, y_train, cv = 10, scoring='neg_mean_squared_error')
+    scores = cross_validation.cross_val_score(model, x_train, y_train, cv = 20, scoring='neg_mean_squared_error')
     print(scores)
     ans = model.predict(x_test)
     sub_df = pd.read_csv('train_test.csv', header=None)
