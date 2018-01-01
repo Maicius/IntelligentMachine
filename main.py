@@ -8,6 +8,7 @@ from sklearn.linear_model import Lasso
 from sklearn import cross_validation
 from sklearn.linear_model import SGDRegressor
 
+
 def pre_process_data():
     print("begin to read data")
     train_data = pd.read_excel('train.xlsx')
@@ -39,7 +40,7 @@ def pre_process_data():
     x_test.fillna(x_test.mean())
     print("Finish preprocess")
     print(x_train.shape, y_train.shape)
-    return x_train.values, y_train.values, x_test.values
+    return x_train, y_train, x_test
 
 
 def remove_nan_data(data):
@@ -88,7 +89,7 @@ def normalize_data(data):
 
 def create_model(x_train, y_train):
     print("begin to train...")
-    model = Lasso(0.2)
+    model = LinearRegression()
     model.fit(x_train, y_train)
     return model
 
@@ -98,15 +99,21 @@ def cal_MSE(y_predict, y_real):
     print("样本数量:" + str(n))
     return np.sum(np.square(y_predict - y_real)) / n
 
+
 if __name__ == '__main__':
     x_train, y_train, x_test = pre_process_data()
     x_train.to_csv('x_train.csv')
     y_train.to_csv('y_train.csv')
     x_test.to_csv('x_test.csv')
-
+    # x_train = pd.read_csv('x_train.csv', header=None)
+    # y_train = pd.read_csv('y_train.csv', header=None)
+    # x_test = pd.read_csv('x_test.csv', header=None)
+    x_train = x_train.values
+    y_train = y_train.values
+    x_test = x_test.values
     model = create_model(x_train, y_train)
     print("交叉验证...")
-    scores = cross_validation.cross_val_score(model, x_train, y_train, cv = 20, scoring='neg_mean_squared_error')
+    scores = cross_validation.cross_val_score(model, x_train, y_train, cv=20, scoring='neg_mean_squared_error')
     print(scores)
     ans = model.predict(x_test)
     sub_df = pd.read_csv('train_test.csv', header=None)
