@@ -103,6 +103,7 @@ def cal_MSE(y_predict, y_real):
 
 def find_min_alpha(x_train, y_train):
     alphas = np.logspace(-3, 2, 50)
+    print(alphas)
     test_scores = []
     alpha_score = []
     for alpha in alphas:
@@ -116,8 +117,11 @@ def find_min_alpha(x_train, y_train):
     print(alpha_score)
     plt.plot(alphas, test_scores)
     plt.title("Alpha vs CV Error")
+    plt.xlabel("alpha")
+    plt.ylabel('scores')
     plt.show()
-    sorted_alpha = sorted(alpha_score, key=lambda x: x[1], reverse=True)
+    sorted_alpha = sorted(alpha_score, key=lambda x: x[1], reverse=False)
+    print(sorted_alpha)
     alpha = sorted_alpha[0][0]
     print("best alpha:" + str(alpha))
     return alpha
