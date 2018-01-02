@@ -31,14 +31,14 @@ def pre_process_data():
     y_train = train_data['Y']
     train_data.drop(['Y'], axis=1, inplace=True)
     x_train = normalize_data(train_data)
-    x_train.fillna(x_train.median())
+    x_train.fillna(x_train.mean())
     corr_df = cal_corrcoef(x_train, y_train)
     corr02 = corr_df[corr_df.corr_value >= 0.2]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
     x_test = normalize_data(x_test)
-    x_test.fillna(x_test.median())
+    x_test.fillna(x_test.mean())
     print("Finish preprocess")
     print(x_train.shape, y_train.shape)
     return x_train, y_train, x_test
@@ -84,8 +84,9 @@ def remove_waste_col(data):
 
 
 def normalize_data(data):
-    return data.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))
+    # return data.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))
     # return preprocessing.scale(data, axis=0)
+    return data.apply(lambda x: (x - np.average(x)) / np.std(x))
 
 
 def create_model(x_train, y_train, alpha):
@@ -102,21 +103,20 @@ def cal_MSE(y_predict, y_real):
 
 
 def find_min_alpha(x_train, y_train):
-    alphas = np.logspace(-3, 2, 50)
+    alphas = np.logspace(-2, 3, 200)
     print(alphas)
     test_scores = []
     alpha_score = []
     for alpha in alphas:
         clf = Ridge(alpha)
-        test_score = np.sqrt(
-            -cross_validation.cross_val_score(clf, x_train, y_train, cv=10, scoring='neg_mean_squared_error'))
+        test_score = -cross_validation.cross_val_score(clf, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
         test_scores.append(np.mean(test_score))
         alpha_score.append([alpha, np.mean(test_score)])
     print("final test score:")
     print(test_scores)
     print(alpha_score)
     plt.plot(alphas, test_scores)
-    plt.title("Alpha vs CV Error")
+    plt.title("cross val score")
     plt.xlabel("alpha")
     plt.ylabel('scores')
     plt.show()
@@ -125,6 +125,7 @@ def find_min_alpha(x_train, y_train):
     alpha = sorted_alpha[0][0]
     print("best alpha:" + str(alpha))
     return alpha
+
 
 if __name__ == '__main__':
     x_train, y_train, x_test = pre_process_data()
