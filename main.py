@@ -84,9 +84,9 @@ def remove_waste_col(data):
 
 
 def normalize_data(data):
-    # return data.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))
+    return data.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))
     # return preprocessing.scale(data, axis=0)
-    return data.apply(lambda x: (x - np.average(x)) / np.std(x))
+    # return data.apply(lambda x: (x - np.average(x)) / np.std(x))
 
 
 def create_model(x_train, y_train, alpha):
