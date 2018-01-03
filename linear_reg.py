@@ -33,7 +33,7 @@ def float_uniq(float_df, float_col):
     float_uniq_col = []
     for col in tqdm(float_col):
         uniq = float_df[col].unique()
-        if len(uniq) == 1:
+        if len(uniq) <= 10:
             float_uniq_col.append(col)
     return float_uniq_col
 
