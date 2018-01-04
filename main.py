@@ -30,15 +30,16 @@ def pre_process_data():
     print(train_data.shape)
     y_train = train_data['Y']
     train_data.drop(['Y'], axis=1, inplace=True)
-    x_train = normalize_data(train_data)
-    x_train.fillna(x_train.mean())
+    # x_train = normalize_data(train_data)
+    x_train = train_data
+    x_train.fillna(x_train.mean(), inplace=True)
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.2]
+    corr02 = corr_df[corr_df.corr_value >= 0.15]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
-    x_test = normalize_data(x_test)
-    x_test.fillna(x_test.mean())
+    # x_test = normalize_data(x_test)
+    x_test.fillna(x_test.mean(), inplace=True)
     print("Finish preprocess")
     print(x_train.shape, y_train.shape)
     return x_train, y_train, x_test
@@ -57,6 +58,9 @@ def remove_nan_data(data):
 def remove_no_float(data):
     data_type = data.dtypes.reset_index()
     data_type.columns = ['col', 'dtype']
+    data_object = data_type[data_type.dtype == 'object'].col.values
+    data_object = data[data_object]
+    data_object.to_csv('main.csv', index=False)
     return data_type[data_type.dtype == 'float64'].col.values
 
 
@@ -78,7 +82,7 @@ def remove_waste_col(data):
     same_num_col = []
     for col in columns:
         max_num = data[col].max()
-        if max_num != data[col].min() and str(max_num).find('2017') == -1 and str(max_num).find('2016') == -1:
+        if max_num != data[col].min() and str(max_num).find('2017') == -1 and str(max_num).find('2016') == -1 and max_num < 1e13:
             same_num_col.append(col)
     return data[same_num_col]
 
@@ -104,7 +108,7 @@ def cal_MSE(y_predict, y_real):
 
 def find_min_alpha(x_train, y_train):
     alphas = np.logspace(-2, 3, 200)
-    print(alphas)
+    # print(alphas)
     test_scores = []
     alpha_score = []
     for alpha in alphas:
@@ -115,11 +119,11 @@ def find_min_alpha(x_train, y_train):
     print("final test score:")
     print(test_scores)
     print(alpha_score)
-    plt.plot(alphas, test_scores)
-    plt.title("cross val score")
-    plt.xlabel("alpha")
-    plt.ylabel('scores')
-    plt.show()
+    # plt.plot(alphas, test_scores)
+    # plt.title("cross val score")
+    # plt.xlabel("alpha")
+    # plt.ylabel('scores')
+    # plt.show()
     sorted_alpha = sorted(alpha_score, key=lambda x: x[1], reverse=False)
     print(sorted_alpha)
     alpha = sorted_alpha[0][0]
@@ -132,12 +136,16 @@ if __name__ == '__main__':
     x_train.to_csv('x_train.csv', header=None, index=False)
     y_train.to_csv('y_train.csv', header=None, index=False)
     x_test.to_csv('x_test.csv', header=None, index=False)
-    # x_train = pd.read_csv('x_train.csv', header=None)
-    # y_train = pd.read_csv('y_train.csv', header=None)
-    # x_test = pd.read_csv('x_test.csv', header=None)
+    x_train = pd.read_csv('x_train.csv', header=None)
+    y_train = pd.read_csv('y_train.csv', header=None)
+    x_test = pd.read_csv('x_test.csv', header=None)
     x_train = x_train.values
     y_train = y_train.values
     x_test = x_test.values
+    X = np.vstack((x_train, x_test))
+    X = preprocessing.scale(X)
+    x_train = X[0:len(x_train)]
+    x_test = X[len(x_train):]
     alpha = find_min_alpha(x_train, y_train)
     model = create_model(x_train, y_train, alpha)
     print("交叉验证...")

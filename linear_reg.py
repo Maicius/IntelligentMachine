@@ -5,6 +5,7 @@ from tqdm import tqdm
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn import preprocessing, cross_validation
 from main import find_min_alpha
+import matplotlib.pyplot as plt
 
 #### calculate miss values
 def col_miss(train_df):
@@ -33,7 +34,7 @@ def float_uniq(float_df, float_col):
     float_uniq_col = []
     for col in tqdm(float_col):
         uniq = float_df[col].unique()
-        if len(uniq) <= 10:
+        if len(uniq) == 1:
             float_uniq_col.append(col)
     return float_uniq_col
 
@@ -102,32 +103,46 @@ if __name__ == '__main__':
     # obtained corrcoef greater than 0.2
     float64_col.remove('Y')
     y_train = train_df.Y.values
-    corr_df = cal_corrcoef(float_df, y_train, float64_col)
-    corr02 = corr_df[corr_df.corr_value >= 0.2]
-    corr02_col = corr02['col'].values.tolist()
-    print('get x_train')
-    x_train = float_df[corr02_col].values
+    corr_num = np.round(np.linspace(0.1, 0.2, 20), 2)
+    test_scores = []
+    num_scores = []
     print('get test data...')
     test_df = pd.read_excel('test_a.xlsx')
-    sub_test = test_df[corr02_col]
-    sub_test.fillna(sub_test.median(), inplace=True)
-    x_test = sub_test.values
-    print('x_train shape:', x_train.shape)
-    print('x_test shape:', x_test.shape)
-    print('build model...')
-    X = np.vstack((x_train, x_test))
-    X = preprocessing.scale(X)
-    x_train = X[0:len(x_train)]
-    x_test = X[len(x_train):]
-    alpha = find_min_alpha(x_train, y_train)
-    model = create_model(x_train, y_train, alpha)
-    print('predict and submit...')
-    subA = model.predict(x_test)
-    # read submit data
-    sub_df = pd.read_csv('sub_a.csv', header=None)
-    sub_df['Y'] = subA
-    sub_df.to_csv('final2.csv', header=None, index=False)
-    print("交叉验证...")
-    scores = cross_validation.cross_val_score(model, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
-    print(scores)
-    print("mean:" + str(scores.mean()))
+    corr_df = cal_corrcoef(float_df, y_train, float64_col)
+    for num in corr_num:
+        corr02 = corr_df[corr_df.corr_value >= num]
+        corr02_col = corr02['col'].values.tolist()
+        print('get x_train')
+        x_train = float_df[corr02_col].values
+
+        sub_test = test_df[corr02_col]
+        sub_test.fillna(sub_test.median(), inplace=True)
+        x_test = sub_test.values
+        print('x_train shape:', x_train.shape)
+        print('x_test shape:', x_test.shape)
+        print('build model...')
+        X = np.vstack((x_train, x_test))
+        X = preprocessing.scale(X)
+        x_train = X[0:len(x_train)]
+        x_test = X[len(x_train):]
+        alpha = find_min_alpha(x_train, y_train)
+        model = create_model(x_train, y_train, alpha)
+        print('predict and submit...')
+        subA = model.predict(x_test)
+        # read submit data
+        # sub_df = pd.read_csv('sub_a.csv', header=None)
+        # sub_df['Y'] = subA
+        # sub_df.to_csv('final3.csv', header=None, index=False)
+        print("交叉验证...")
+        scores = cross_validation.cross_val_score(model, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+        print(scores)
+        print(str(num) + ":" + str(scores.mean()))
+        num_scores.append([num, scores.mean()])
+        test_scores.append(scores.mean())
+    plt.plot(corr_num, test_scores)
+    plt.title("cross val score")
+    plt.xlabel("alpha")
+    plt.ylabel('scores')
+    plt.show()
+    plt.savefig()
+    print(sorted(num_scores, key=lambda x:x[1]))
