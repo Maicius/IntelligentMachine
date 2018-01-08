@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from main import cal_MSE
-yesterday = pd.read_csv('result/result.csv', header=None)
-today = pd.read_csv('final3.csv', header=None)
+yesterday = pd.read_csv('result/测试A.csv', header=None)
+today = pd.read_csv('.csv', header=None)
 yesterday = yesterday[1]
 today = today[1]
 print(cal_MSE(yesterday, today))
