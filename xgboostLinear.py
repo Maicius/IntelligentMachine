@@ -3,27 +3,27 @@ import numpy as np
 import xgboost as xgb
 import pandas as pd
 ### load data in do training
-x_train = pd.read_csv('x_train.csv')
-y_train = pd.read_csv('y_train.csv')
+x_train = pd.read_csv('half_data/x_train.csv')
+y_train = pd.read_csv('half_data/y_train.csv')
 dtrain = xgb.DMatrix(x_train, label=y_train)
 param = {'booster': 'gblinear', 'lambda': 6, 'silent': 0, 'objective': 'reg:linear'}
-num_round = 10
+num_round = 10000
 
 print('running cross validation')
 # do cross validation, this will print result out as
 # [iteration]  metric_name:mean_value+std_value
 # std_value is standard deviation of the metric
-xgb.cv(param, dtrain, num_round, nfold=5,
-       metrics={'error'}, seed=0,
-       callbacks=[xgb.callback.print_evaluation(show_stdv=True)])
+# xgb.cv(param, dtrain, num_round, nfold=5,
+#        metrics={'rmse'}, seed=0,
+#        callbacks=[xgb.callback.print_evaluation(show_stdv=True)])
 
 print('running cross validation, disable standard deviation display')
 # do cross validation, this will print result out as
 # [iteration]  metric_name:mean_value
-res = xgb.cv(param, dtrain, num_boost_round=10, nfold=5,
-             metrics={'error'}, seed=0,
+res = xgb.cv(param, dtrain, num_boost_round=1000,
+             metrics={'rmse'},
              callbacks=[xgb.callback.print_evaluation(show_stdv=False),
-                        xgb.callback.early_stop(4)])
+                        xgb.callback.early_stop(50)])
 print(res)
 # print('running cross validation, with preprocessing function')
 #
