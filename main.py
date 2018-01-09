@@ -55,13 +55,14 @@ def remove_nan_data(data):
     return nan_data_value
 
 
-#  删除非数字行
+
+#  删除非数字列
 def remove_no_float(data):
     data_type = data.dtypes.reset_index()
     data_type.columns = ['col', 'dtype']
     data_object = data_type[data_type.dtype == 'object'].col.values
     data_object = data[data_object]
-    data_object.to_csv('main.csv', index=False)
+    data_object.to_csv('half_data/non_float_col.csv', index=False)
     return data_type[data_type.dtype == 'float64'].col.values
 
 
@@ -151,9 +152,9 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     print("Begin to train with xgboost")
     model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
     preds = model.predict(x_test)
-    sub_df = pd.read_csv('sub_a.csv', header=None)
+    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = preds
-    sub_df.to_csv('xgboost2.csv', header=None, index=False)
+    sub_df.to_csv('result/xgboost2.csv', header=None, index=False)
 
 
 def plot_image(x, y, x_label=None, y_label=None):
@@ -170,24 +171,25 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     print(scores)
     print("mean:" + str(scores.mean()))
     ans = model.predict(x_test)
-    sub_df = pd.read_csv('sub_a.csv', header=None)
+    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = ans
-    sub_df.to_csv('final.csv', header=None, index=False)
+    sub_df.to_csv('result/final.csv', header=None, index=False)
     print("MSE:")
     print(cal_MSE(ans, y_train))
+
 
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
     # x_train, y_train, x_test = pre_process_data()
     # # 保存特征工程的结果到文件
-    # x_train.to_csv('x_train.csv', header=None, index=False)
-    # y_train.to_csv('y_train.csv', header=None, index=False)
-    # x_test.to_csv('x_test.csv', header=None, index=False)
+    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
-    x_train = pd.read_csv('x_train.csv', header=None)
-    y_train = pd.read_csv('y_train.csv', header=None)
-    x_test = pd.read_csv('x_test.csv', header=None)
+    x_train = pd.read_csv('half_data/x_train.csv', header=None)
+    y_train = pd.read_csv('half_data/y_train.csv', header=None)
+    x_test = pd.read_csv('half_data/x_test.csv', header=None)
     x_train = x_train.values
     y_train = y_train.values
     x_test = x_test.values
