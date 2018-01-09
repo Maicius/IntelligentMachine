@@ -1,6 +1,6 @@
 import pandas as pd
 from main import remove_no_float
-
+import numpy as np
 small_data = pd.read_excel('raw_data/small.xlsx')
 print(small_data.shape)
 small_data.drop(['ID'], axis=1, inplace=True)
@@ -22,10 +22,16 @@ lower = small_data.mean() - 3 * small_data.std()
 
 wrong_data1 = (small_data > upper).sum(axis=1).reset_index()
 wrong_data1.columns = ['row', 'na_count']
-wrong_row = wrong_data1[wrong_data1.na_count >= 3].row.values
+wrong_row1 = wrong_data1[wrong_data1.na_count >= 3].row.values
+
+wrong_data2 = (small_data < lower).sum(axis=1).reset_index()
+wrong_data2.columns = ['row', 'na_count']
+wrong_row2 = wrong_data2[wrong_data2.na_count >= 3].row.values
+wrong_row = np.concatenate((wrong_row1, wrong_row2))
+
 print(small_data.shape)
 small_data.drop(wrong_row, axis=0, inplace=True)
-print(small_data.shape)
+print(wrong_row1)
 wrong_data2 = wrong_data1[wrong_data1 > lower]
-
+print(small_data.shape)
 

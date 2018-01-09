@@ -13,8 +13,8 @@ import xgboost as xgb
 
 def pre_process_data():
     print("begin to read data")
-    train_data = pd.read_excel('train.xlsx')
-    x_test = pd.read_excel('test_a.xlsx')
+    train_data = pd.read_excel('raw_data/train.xlsx')
+    x_test = pd.read_excel('raw_data/test_a.xlsx')
 
     # 去掉空行
     print("raw_data:" + str(train_data.shape))
@@ -41,6 +41,7 @@ def pre_process_data():
     x_test = x_test[corr02_col]
     # x_test = normalize_data(x_test)
     x_test.fillna(x_test.mean(), inplace=True)
+    x_train, y = remove_wrong_row(x_train, y_train)
     print("Finish preprocess")
     print(x_train.shape, y_train.shape)
     return x_train, y_train, x_test
@@ -53,7 +54,6 @@ def remove_nan_data(data):
     nan_data_value = nan_data[nan_data.nan_count > 200].col.values
     print("nan_data_value:" + str(nan_data_value))
     return nan_data_value
-
 
 
 #  删除非数字列
@@ -88,6 +88,21 @@ def remove_waste_col(data):
                 '2016') == -1 and max_num < 1e13:
             same_num_col.append(col)
     return data[same_num_col]
+
+
+def remove_wrong_row(data,  y):
+    upper = data.mean() + 3 * data.std()
+    lower = data.mean() - 3 * data.std()
+    wrong_data1 = (data > upper).sum(axis=1).reset_index()
+    wrong_data1.columns = ['row', 'na_count']
+    wrong_row1 = wrong_data1[wrong_data1.na_count >= 15].row.values
+    wrong_data2 = (data < lower).sum(axis=1).reset_index()
+    wrong_data2.columns = ['row', 'na_count']
+    wrong_row2 = wrong_data2[wrong_data2.na_count >= 15].row.values
+    wrong_row = np.concatenate((wrong_row1, wrong_row2))
+    data.drop(wrong_row, axis=0, inplace=True)
+    y.drop(wrong_row, axis=0, inplace=True)
+    return data, y
 
 
 def normalize_data(data):
@@ -142,8 +157,21 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     offset = 394
     num_rounds = 10000
     # 划分训练集与验证集
-    # for offset in offsets:
+    offsets = [460]
+    best_scores = []
     x_test = xgb.DMatrix(x_test)
+    for offset in offsets:
+        xgtrain = xgb.DMatrix(x_train[:offset], label=y_train[:offset])
+        xgval = xgb.DMatrix(x_train[offset:], label=y_train[offset:])
+        # return 训练和验证的错误率
+        watchlist = [(xgtrain, 'train'), (xgval, 'val')]
+        # begin to train
+        print("Begin to train with xgboost")
+        model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
+        best_scores.append((offset, model.best_score))
+    best_scores = sorted(best_scores, key=lambda x:x[1], reverse=False)
+    plot_image(list(map(lambda x:x[0], best_scores)), list(map(lambda x:x[1], best_scores)))
+    offset = best_scores[0][0]
     xgtrain = xgb.DMatrix(x_train[:offset], label=y_train[:offset])
     xgval = xgb.DMatrix(x_train[offset:], label=y_train[offset:])
     # return 训练和验证的错误率
@@ -151,10 +179,15 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     # begin to train
     print("Begin to train with xgboost")
     model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
+
     preds = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = preds
     sub_df.to_csv('result/xgboost2.csv', header=None, index=False)
+    print(best_scores)
+
+def find_best_offset():
+    pass
 
 
 def plot_image(x, y, x_label=None, y_label=None):
@@ -163,6 +196,7 @@ def plot_image(x, y, x_label=None, y_label=None):
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.show()
+
 
 def train_with_LR_L2(x_train, y_train, x_test, alpha):
     model = create_model(x_train, y_train, alpha)
@@ -176,7 +210,6 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     sub_df.to_csv('result/final.csv', header=None, index=False)
     print("MSE:")
     print(cal_MSE(ans, y_train))
-
 
 
 if __name__ == '__main__':
