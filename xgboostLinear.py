@@ -6,7 +6,7 @@ import pandas as pd
 x_train = pd.read_csv('x_train.csv')
 y_train = pd.read_csv('y_train.csv')
 dtrain = xgb.DMatrix(x_train, label=y_train)
-param = {'booster': 'gblinear', 'lambda': '0.001', 'silent': 0, 'objective': 'reg:linear'}
+param = {'booster': 'gblinear', 'lambda': 6, 'silent': 0, 'objective': 'reg:linear'}
 num_round = 10
 
 print('running cross validation')

@@ -8,6 +8,7 @@ from sklearn.linear_model import Lasso
 from sklearn import cross_validation
 from sklearn.linear_model import SGDRegressor
 import matplotlib.pyplot as plt
+import xgboost as xgb
 
 
 def pre_process_data():
@@ -34,7 +35,7 @@ def pre_process_data():
     x_train = train_data
     x_train.fillna(x_train.mean(), inplace=True)
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.15]
+    corr02 = corr_df[corr_df.corr_value >= 0.20]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
@@ -82,7 +83,8 @@ def remove_waste_col(data):
     same_num_col = []
     for col in columns:
         max_num = data[col].max()
-        if max_num != data[col].min() and str(max_num).find('2017') == -1 and str(max_num).find('2016') == -1 and max_num < 1e13:
+        if max_num != data[col].min() and str(max_num).find('2017') == -1 and str(max_num).find(
+                '2016') == -1 and max_num < 1e13:
             same_num_col.append(col)
     return data[same_num_col]
 
@@ -119,11 +121,7 @@ def find_min_alpha(x_train, y_train):
     print("final test score:")
     print(test_scores)
     print(alpha_score)
-    # plt.plot(alphas, test_scores)
-    # plt.title("cross val score")
-    # plt.xlabel("alpha")
-    # plt.ylabel('scores')
-    # plt.show()
+
     sorted_alpha = sorted(alpha_score, key=lambda x: x[1], reverse=False)
     print(sorted_alpha)
     alpha = sorted_alpha[0][0]
@@ -131,22 +129,41 @@ def find_min_alpha(x_train, y_train):
     return alpha
 
 
-if __name__ == '__main__':
-    x_train, y_train, x_test = pre_process_data()
-    x_train.to_csv('x_train.csv', header=None, index=False)
-    y_train.to_csv('y_train.csv', header=None, index=False)
-    x_test.to_csv('x_test.csv', header=None, index=False)
-    x_train = pd.read_csv('x_train.csv', header=None)
-    y_train = pd.read_csv('y_train.csv', header=None)
-    x_test = pd.read_csv('x_test.csv', header=None)
-    x_train = x_train.values
-    y_train = y_train.values
-    x_test = x_test.values
-    X = np.vstack((x_train, x_test))
-    X = preprocessing.scale(X)
-    x_train = X[0:len(x_train)]
-    x_test = X[len(x_train):]
-    alpha = find_min_alpha(x_train, y_train)
+def train_with_xgboost(x_train, y_train, x_test, alpha):
+    params = {
+        'booster': 'gblinear',
+        'silent': 0,
+        'eta': 0.01,
+        'lambda': alpha,
+        'objective': 'reg:linear'
+    }
+    # 划分训练数据集与验证数据集
+    offset = 394
+    num_rounds = 10000
+    # 划分训练集与验证集
+    # for offset in offsets:
+    x_test = xgb.DMatrix(x_test)
+    xgtrain = xgb.DMatrix(x_train[:offset], label=y_train[:offset])
+    xgval = xgb.DMatrix(x_train[offset:], label=y_train[offset:])
+    # return 训练和验证的错误率
+    watchlist = [(xgtrain, 'train'), (xgval, 'val')]
+    # begin to train
+    print("Begin to train with xgboost")
+    model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
+    preds = model.predict(x_test)
+    sub_df = pd.read_csv('sub_a.csv', header=None)
+    sub_df['Y'] = preds
+    sub_df.to_csv('xgboost2.csv', header=None, index=False)
+
+
+def plot_image(x, y, x_label=None, y_label=None):
+    plt.plot(x, y)
+    plt.title("cross val score")
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.show()
+
+def train_with_LR_L2(x_train, y_train, x_test, alpha):
     model = create_model(x_train, y_train, alpha)
     print("交叉验证...")
     scores = cross_validation.cross_val_score(model, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
@@ -156,5 +173,33 @@ if __name__ == '__main__':
     sub_df = pd.read_csv('sub_a.csv', header=None)
     sub_df['Y'] = ans
     sub_df.to_csv('final.csv', header=None, index=False)
-    # print("MSE:")
-    # print(cal_MSE(ans, y_train))
+    print("MSE:")
+    print(cal_MSE(ans, y_train))
+
+
+if __name__ == '__main__':
+    # 数据预处理，特征工程
+    # x_train, y_train, x_test = pre_process_data()
+    # # 保存特征工程的结果到文件
+    # x_train.to_csv('x_train.csv', header=None, index=False)
+    # y_train.to_csv('y_train.csv', header=None, index=False)
+    # x_test.to_csv('x_test.csv', header=None, index=False)
+    # 从文件中读取经过预处理的数据
+    x_train = pd.read_csv('x_train.csv', header=None)
+    y_train = pd.read_csv('y_train.csv', header=None)
+    x_test = pd.read_csv('x_test.csv', header=None)
+    x_train = x_train.values
+    y_train = y_train.values
+    x_test = x_test.values
+    X = np.vstack((x_train, x_test))
+    # normalize数据
+    X = preprocessing.scale(X)
+
+    x_train = X[0:len(x_train)]
+    x_test = X[len(x_train):]
+    # 寻找L2正则的最优化alpha
+    alpha = find_min_alpha(x_train, y_train)
+    # 训练模型
+    # train_with_LR_L2(x_train, y_train,x_test, alpha)
+    # alpha = 890
+    train_with_xgboost(x_train, y_train, x_test, alpha)
