@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
+from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.linear_model import Lasso
 from sklearn import cross_validation
@@ -11,6 +12,8 @@ import matplotlib.pyplot as plt
 import xgboost as xgb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import PCA
+from sklearn.model_selection import GridSearchCV
+
 
 def pre_process_data():
     print("begin to read data")
@@ -36,7 +39,7 @@ def pre_process_data():
     x_train = train_data
     x_train.fillna(x_train.mean(), inplace=True)
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.21]
+    corr02 = corr_df[corr_df.corr_value >= 0.20]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
@@ -92,7 +95,7 @@ def remove_waste_col(data):
     return data[same_num_col]
 
 
-def remove_wrong_row(data,  y):
+def remove_wrong_row(data, y):
     upper = data.mean() + 3 * data.std()
     lower = data.mean() - 3 * data.std()
     wrong_data1 = (data > upper).sum(axis=1).reset_index()
@@ -171,8 +174,8 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
         print("Begin to train with xgboost")
         model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
         best_scores.append((offset, model.best_score))
-    best_scores = sorted(best_scores, key=lambda x:x[1], reverse=False)
-    plot_image(list(map(lambda x:x[0], best_scores)), list(map(lambda x:x[1], best_scores)))
+    best_scores = sorted(best_scores, key=lambda x: x[1], reverse=False)
+    plot_image(list(map(lambda x: x[0], best_scores)), list(map(lambda x: x[1], best_scores)))
     offset = best_scores[0][0]
     xgtrain = xgb.DMatrix(x_train[:offset], label=y_train[:offset])
     xgval = xgb.DMatrix(x_train[offset:], label=y_train[offset:])
@@ -187,6 +190,34 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     sub_df['Y'] = preds
     sub_df.to_csv('result/xgboost2.csv', header=None, index=False)
     print(best_scores)
+
+
+def search_cv(x_train, y_train, alpha):
+    # x_train = xgb.DMatrix(x_train)
+    # y_train1 = xgb.DMatrix(y_train)
+    xgb_model = xgb.XGBModel()
+    params = {
+        'booster': ['gblinear'],
+        'silent': [0],
+        'eta': [x for x in np.round(np.linspace(0.01, 0.5, 10), 2)],
+        'lambda': [alpha],
+        'objective': ['reg:linear']
+    }
+    clf = GridSearchCV(xgb_model, params,
+                       cv=StratifiedKFold(10, shuffle=True),
+                       scoring='neg_mean_squared_error',
+                       refit=True)
+
+    clf.fit(x_train, y_train)
+    preds = clf.score(x_test)
+    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
+    sub_df['Y'] = preds
+    sub_df.to_csv('result/xgboost3.csv', header=None, index=False)
+    best_parameters, score, _ = max(clf.grid_scores_, key=lambda x: x[1])
+    print('Raw RMSE:', score)
+    for param_name in sorted(best_parameters.keys()):
+        print("%s: %r" % (param_name, best_parameters[param_name]))
+
 
 def find_best_offset():
     pass
@@ -214,11 +245,11 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
-    x_train, y_train, x_test = pre_process_data()
-    # 保存特征工程的结果到文件
-    x_train.to_csv('half_data/x_train.csv', header=None, index=False)
-    y_train.to_csv('half_data/y_train.csv', header=None, index=False)
-    x_test.to_csv('half_data/x_test.csv', header=None, index=False)
+    # x_train, y_train, x_test = pre_process_data()
+    # # 保存特征工程的结果到文件
+    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
     x_train = pd.read_csv('half_data/x_train.csv', header=None)
     y_train = pd.read_csv('half_data/y_train.csv', header=None)
@@ -244,6 +275,7 @@ if __name__ == '__main__':
     # 寻找L2正则的最优化alpha
     alpha = find_min_alpha(x_train, y_train)
     # 训练模型
-    train_with_LR_L2(x_train, y_train, x_test, alpha)
+    # train_with_LR_L2(x_train, y_train, x_test, alpha)
     # alpha = 890
     # train_with_xgboost(x_train, y_train, x_test, alpha)
+    search_cv(x_train, y_train, alpha)

@@ -8,10 +8,10 @@ today = today[1]
 print(cal_MSE(yesterday, today))
 pass
 
-# corr_num = np.round(np.linspace(0.1, 0.2, 20), 2)
-# print(corr_num)
-# train_data = pd.read_csv('x_train.csv')
-# print(train_data.shape)
+corr_num = np.round(np.linspace(0.01, 0.5, 10), 2)
+print("corrnum", corr_num)
+train_data = pd.read_csv('half_data/x_train.csv')
+print(train_data.shape)
 
 offsets = np.arange(394, 400, 2)
 print(sorted(offsets, reverse=True))

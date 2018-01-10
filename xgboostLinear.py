@@ -20,6 +20,7 @@ print('running cross validation')
 print('running cross validation, disable standard deviation display')
 # do cross validation, this will print result out as
 # [iteration]  metric_name:mean_value
+
 res = xgb.cv(param, dtrain, num_boost_round=1000,
              metrics={'rmse'},
              callbacks=[xgb.callback.print_evaluation(show_stdv=False),
