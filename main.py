@@ -188,7 +188,7 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     preds = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = preds
-    sub_df.to_csv('result/xgboost2.csv', header=None, index=False)
+    sub_df.to_csv('result/xgboost3.csv', header=None, index=False)
     print(best_scores)
 
 

@@ -54,6 +54,21 @@ def build_model(x_train, y_train):
     return reg_model
 
 
+def remove_wrong_row(data, y):
+    upper = data.mean() + 3 * data.std()
+    lower = data.mean() - 3 * data.std()
+    wrong_data1 = (data > upper).sum(axis=1).reset_index()
+    wrong_data1.columns = ['row', 'na_count']
+    wrong_row1 = wrong_data1[wrong_data1.na_count >= 15].row.values
+    wrong_data2 = (data < lower).sum(axis=1).reset_index()
+    wrong_data2.columns = ['row', 'na_count']
+    wrong_row2 = wrong_data2[wrong_data2.na_count >= 15].row.values
+    wrong_row = np.concatenate((wrong_row1, wrong_row2))
+    data.drop(wrong_row, axis=0, inplace=True)
+    y.drop(wrong_row, axis=0, inplace=True)
+    return data, y
+
+
 if __name__ == '__main__':
     # read train data
     print('read train...')
@@ -95,12 +110,15 @@ if __name__ == '__main__':
     print('deleted unique cols, and float cols count:', len(float64_col))
     # obtained corrcoef greater than 0.2
     float64_col.remove('Y')
-    y_train = train_df.Y.values
+    y_train = train_df['Y']
     corr_df = cal_corrcoef(float_df, y_train, float64_col)
     corr02 = corr_df[corr_df.corr_value >= 0.2]
     corr02_col = corr02['col'].values.tolist()
     print('get x_train')
-    x_train = float_df[corr02_col].values
+    x_train = float_df[corr02_col]
+    x_train, y_train = remove_wrong_row(x_train, y_train)
+    x_train = x_train.values
+    y_train = y_train.values
     print('get test data...')
     test_df = pd.read_excel('raw_data/test_a.xlsx')
     sub_test = test_df[corr02_col]
@@ -113,6 +131,7 @@ if __name__ == '__main__':
     X = preprocessing.scale(X)
     x_train = X[0:len(x_train)]
     x_test = X[len(x_train):]
+
     # model = build_model(x_train, y_train)
     alpha = find_min_alpha(x_train, y_train)
     print('predict and submit...')
