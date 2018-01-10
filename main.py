@@ -9,7 +9,8 @@ from sklearn import cross_validation
 from sklearn.linear_model import SGDRegressor
 import matplotlib.pyplot as plt
 import xgboost as xgb
-
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.decomposition import PCA
 
 def pre_process_data():
     print("begin to read data")
@@ -35,7 +36,7 @@ def pre_process_data():
     x_train = train_data
     x_train.fillna(x_train.mean(), inplace=True)
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.20]
+    corr02 = corr_df[corr_df.corr_value >= 0.21]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
@@ -75,6 +76,7 @@ def cal_corrcoef(float_df, y_train):
                                    [0, 1]))
     corr_df = pd.DataFrame({'col': float_col, 'corr_value': corr_values})
     corr_df = corr_df.sort_values(by='corr_value', ascending=False)
+
     return corr_df
 
 
@@ -208,20 +210,19 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = ans
     sub_df.to_csv('result/final.csv', header=None, index=False)
-    print("MSE:")
-    print(cal_MSE(ans, y_train))
 
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
-    # x_train, y_train, x_test = pre_process_data()
-    # # 保存特征工程的结果到文件
-    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
-    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
-    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
+    x_train, y_train, x_test = pre_process_data()
+    # 保存特征工程的结果到文件
+    x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
     x_train = pd.read_csv('half_data/x_train.csv', header=None)
     y_train = pd.read_csv('half_data/y_train.csv', header=None)
+    print(x_train.shape, y_train.shape)
     x_test = pd.read_csv('half_data/x_test.csv', header=None)
     x_train = x_train.values
     y_train = y_train.values
@@ -232,9 +233,17 @@ if __name__ == '__main__':
 
     x_train = X[0:len(x_train)]
     x_test = X[len(x_train):]
+    # # LDA降维
+    # lda = LinearDiscriminantAnalysis(n_components=100)
+    # lda.fit(x_train, y_train)
+    # pca = PCA(n_components=120, copy=False)
+    # x_train = pca.fit_transform(x_train)
+    # x_test = pca.fit_transform(x_test)
+    print("降低纬度:")
+    print(x_train.shape, y_train.shape)
     # 寻找L2正则的最优化alpha
     alpha = find_min_alpha(x_train, y_train)
     # 训练模型
-    # train_with_LR_L2(x_train, y_train,x_test, alpha)
+    train_with_LR_L2(x_train, y_train, x_test, alpha)
     # alpha = 890
-    train_with_xgboost(x_train, y_train, x_test, alpha)
+    # train_with_xgboost(x_train, y_train, x_test, alpha)
