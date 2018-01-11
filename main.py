@@ -19,17 +19,19 @@ def pre_process_data():
     print("begin to read data")
     train_data = pd.read_excel('raw_data/train.xlsx')
     x_test = pd.read_excel('raw_data/test_a.xlsx')
-
+    train_data.drop(['ID'], axis=1, inplace=True)
+    x_test.drop(['ID'], axis=1, inplace=True)
     # 去掉空行
     print("raw_data:" + str(train_data.shape))
     nan_data_value = remove_nan_data(train_data)
 
     train_data.drop(nan_data_value, axis=1, inplace=True)
+    train_data.fillna(train_data.median(), inplace=True)
     print("remove nan data:" + str(train_data.shape))
-    float_data = remove_no_float(train_data)
+    float_data = change_object_to_float(train_data)
     # train_data = remove_date(train_data)
-    train_data = train_data[float_data]
-    print(float_data)
+    train_data = float_data
+    print(float_data.shape)
     print(train_data.shape)
     train_data = remove_waste_col(train_data)
     print(train_data.shape)
@@ -37,14 +39,15 @@ def pre_process_data():
     train_data.drop(['Y'], axis=1, inplace=True)
     # x_train = normalize_data(train_data)
     x_train = train_data
-    x_train.fillna(x_train.mean(), inplace=True)
+    x_train.fillna(x_train.median(), inplace=True)
     corr_df = cal_corrcoef(x_train, y_train)
     corr02 = corr_df[corr_df.corr_value >= 0.20]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
     # x_test = normalize_data(x_test)
-    x_test.fillna(x_test.mean(), inplace=True)
+    x_test.fillna(x_test.median(), inplace=True)
+    x_test = change_object_to_float(x_test)
     x_train, y = remove_wrong_row(x_train, y_train)
     print("Finish preprocess")
     print(x_train.shape, y_train.shape)
@@ -57,7 +60,31 @@ def remove_nan_data(data):
     nan_data = nan_data.sort_values(by='nan_count')
     nan_data_value = nan_data[nan_data.nan_count > 200].col.values
     print("nan_data_value:" + str(nan_data_value))
+
     return nan_data_value
+
+
+def change_object_to_float(data):
+    print(data.shape)
+    data_type = data.dtypes.reset_index()
+    data_type.columns = ['col', 'dtype']
+    set_object = set('A')
+    dict_object = {}
+    data_object_col = data_type[data_type.dtype == 'object'].col.values
+    data_object = data[data_object_col]
+    i = 0.0
+    for object in data_object:
+        set_object = set(data_object[object].values) | set_object
+        print(set_object)
+    for item in set_object:
+        dict_object[item] = i
+        i += 1.0
+    print(dict_object)
+    for col in data_object_col:
+        for i in range(len(data[col].values)):
+            data[col].values[i] = dict_object[data[col].values[i]]
+
+    return data
 
 
 #  删除非数字列
@@ -66,6 +93,7 @@ def remove_no_float(data):
     data_type.columns = ['col', 'dtype']
     data_object = data_type[data_type.dtype == 'object'].col.values
     data_object = data[data_object]
+
     data_object.to_csv('half_data/non_float_col.csv', index=False)
     return data_type[data_type.dtype == 'float64'].col.values
 
@@ -89,8 +117,8 @@ def remove_waste_col(data):
     same_num_col = []
     for col in columns:
         max_num = data[col].max()
-        if max_num != data[col].min() and str(max_num).find('2017') == -1 and str(max_num).find(
-                '2016') == -1 and max_num < 1e13:
+        if max_num != data[col].min() and max_num < 1e13and str(max_num).find('2017') == -1 and str(max_num).find(
+                '2016') == -1:
             same_num_col.append(col)
     return data[same_num_col]
 
@@ -162,12 +190,12 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     offset = 394
     num_rounds = 10000
     # 划分训练集与验证集
-    offsets = [460]
+    offsets = [485]
     best_scores = []
     x_test = xgb.DMatrix(x_test)
     for offset in offsets:
         xgtrain = xgb.DMatrix(x_train[:offset], label=y_train[:offset])
-        xgval = xgb.DMatrix(x_train[offset:], label=y_train[offset:])
+        xgval = xgb.DMatrix(x_train[offset - 100:], label=y_train[offset - 100:])
         # return 训练和验证的错误率
         watchlist = [(xgtrain, 'train'), (xgval, 'val')]
         # begin to train
@@ -240,16 +268,16 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     ans = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = ans
-    sub_df.to_csv('result/final.csv', header=None, index=False)
+    sub_df.to_csv('result/submit.csv', header=None, index=False)
 
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
-    # x_train, y_train, x_test = pre_process_data()
-    # # 保存特征工程的结果到文件
-    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
-    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
-    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
+    x_train, y_train, x_test = pre_process_data()
+    # 保存特征工程的结果到文件
+    x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
     x_train = pd.read_csv('half_data/x_train.csv', header=None)
     y_train = pd.read_csv('half_data/y_train.csv', header=None)
@@ -275,7 +303,7 @@ if __name__ == '__main__':
     # 寻找L2正则的最优化alpha
     alpha = find_min_alpha(x_train, y_train)
     # 训练模型
-    # train_with_LR_L2(x_train, y_train, x_test, alpha)
+    train_with_LR_L2(x_train, y_train, x_test, alpha)
     # alpha = 890
     # train_with_xgboost(x_train, y_train, x_test, alpha)
-    search_cv(x_train, y_train, alpha)
+    # # search_cv(x_train, y_train, alpha)
