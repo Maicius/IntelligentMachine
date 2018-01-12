@@ -41,7 +41,7 @@ def pre_process_data():
     x_train = train_data
     x_train.fillna(x_train.median(), inplace=True)
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.20]
+    corr02 = corr_df[corr_df.corr_value >= 0.21]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
@@ -216,7 +216,7 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     preds = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = preds
-    sub_df.to_csv('result/xgboost3.csv', header=None, index=False)
+    sub_df.to_csv('result/xgboost4.csv', header=None, index=False)
     print(best_scores)
 
 
@@ -292,9 +292,9 @@ if __name__ == '__main__':
 
     x_train = X[0:len(x_train)]
     x_test = X[len(x_train):]
-    # # LDA降维
-    lda = LinearDiscriminantAnalysis(n_components=100)
-    lda.fit(x_train, y_train)
+    # LDA降维
+    # lda = LinearDiscriminantAnalysis(n_components=100)
+    # lda.fit(x_train, y_train)
     # pca = PCA(n_components=120, copy=False)
     # x_train = pca.fit_transform(x_train)
     # x_test = pca.fit_transform(x_test)
@@ -303,7 +303,7 @@ if __name__ == '__main__':
     # 寻找L2正则的最优化alpha
     alpha = find_min_alpha(x_train, y_train)
     # 训练模型
-    train_with_LR_L2(x_train, y_train, x_test, alpha)
+    # train_with_LR_L2(x_train, y_train, x_test, alpha)
     # alpha = 890
-    # train_with_xgboost(x_train, y_train, x_test, alpha)
+    train_with_xgboost(x_train, y_train, x_test, alpha)
     # # search_cv(x_train, y_train, alpha)
