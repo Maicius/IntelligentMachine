@@ -293,8 +293,8 @@ if __name__ == '__main__':
     x_train = X[0:len(x_train)]
     x_test = X[len(x_train):]
     # # LDA降维
-    # lda = LinearDiscriminantAnalysis(n_components=100)
-    # lda.fit(x_train, y_train)
+    lda = LinearDiscriminantAnalysis(n_components=100)
+    lda.fit(x_train, y_train)
     # pca = PCA(n_components=120, copy=False)
     # x_train = pca.fit_transform(x_train)
     # x_test = pca.fit_transform(x_test)
