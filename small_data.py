@@ -1,6 +1,10 @@
 import pandas as pd
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from main import remove_waste_col
 from main import remove_no_float
 import numpy as np
+from sklearn import preprocessing
+from sklearn import utils
 
 def remove_wrong_row(small_data):
     nan_data1 = small_data.isnull()
@@ -57,7 +61,24 @@ def change_object_to_float(data):
     #     data[col].values = list(map(lambda x: dict_object[x], list(data[col].values)))
 
     # data_object.apply(lambda x: dict_object[x])
-    data.to_excel("half_data/data_to_float.xlsx")
+
+    # data.to_excel("half_data/data_to_float.xlsx")
+    return data
+
+
+def do_lda(x_train, y_train):
+    print("Begin LDA。。。")
+    lab_enc = preprocessing.LabelEncoder()
+    encoded = lab_enc.fit_transform(y_train)
+    print(utils.multiclass.type_of_target(y_train))
+    print(utils.multiclass.type_of_target(encoded))
+    print(encoded)
+    lda = LinearDiscriminantAnalysis(n_components=10)
+    lda.fit(x_train, encoded)
+    x_train_new = lda.transform(x_train)
+    # x_train_new.to_csv('lda_train.csv', header=None, index=False)
+    print(x_train_new)
+    return x_train_new
 
 
 
@@ -66,4 +87,9 @@ if __name__ == '__main__':
     print(small_data.shape)
     small_data.drop(['ID'], axis=1, inplace=True)
     # remove_wrong_row(small_data)
-    change_object_to_float(small_data)
+    small_data = change_object_to_float(small_data)
+    small_data.fillna(small_data.median(), inplace=True)
+    small_data = remove_waste_col(small_data)
+    x_train = small_data.drop(['Y'], axis=1)
+    y_train = small_data['Y']
+    x_train = do_lda(x_train, y_train)

@@ -258,6 +258,20 @@ def plot_image(x, y, x_label=None, y_label=None):
     plt.ylabel(y_label)
     plt.show()
 
+def do_lda(x_train, y_train):
+    print("Begin LDA。。。")
+    lab_enc = preprocessing.LabelEncoder()
+    encoded = lab_enc.fit_transform(y_train)
+    print(utils.multiclass.type_of_target(y_train))
+    print(utils.multiclass.type_of_target(encoded))
+    print(encoded)
+    lda = LinearDiscriminantAnalysis(n_components=10)
+    lda.fit(x_train, encoded)
+    x_train_new = lda.transform(x_train)
+    # x_train_new.to_csv('lda_train.csv', header=None, index=False)
+    print(x_train_new)
+    return x_train_new
+
 
 def train_with_LR_L2(x_train, y_train, x_test, alpha):
     model = create_model(x_train, y_train, alpha)
