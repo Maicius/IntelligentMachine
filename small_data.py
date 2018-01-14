@@ -92,4 +92,4 @@ if __name__ == '__main__':
     small_data = remove_waste_col(small_data)
     x_train = small_data.drop(['Y'], axis=1)
     y_train = small_data['Y']
-    x_train = do_lda(x_train, y_train)
+    x_train = do_lda(x_train.values, y_train.values)

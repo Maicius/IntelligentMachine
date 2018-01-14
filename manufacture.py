@@ -56,17 +56,17 @@ def build_model(x_train, y_train):
 
 
 def remove_wrong_row(data, y):
-    # upper = data.mean() + 3 * data.std()
-    # lower = data.mean() - 3 * data.std()
-    # wrong_data1 = (data > upper).sum(axis=1).reset_index()
-    # wrong_data1.columns = ['row', 'na_count']
-    # wrong_row1 = wrong_data1[wrong_data1.na_count >= 15].row.values
-    # wrong_data2 = (data < lower).sum(axis=1).reset_index()
-    # wrong_data2.columns = ['row', 'na_count']
-    # wrong_row2 = wrong_data2[wrong_data2.na_count >= 15].row.values
-    # wrong_row = np.concatenate((wrong_row1, wrong_row2))
-    # data.drop(wrong_row, axis=0, inplace=True)
-    # y.drop(wrong_row, axis=0, inplace=True)
+    upper = data.mean() + 3 * data.std()
+    lower = data.mean() - 3 * data.std()
+    wrong_data1 = (data > upper).sum(axis=1).reset_index()
+    wrong_data1.columns = ['row', 'na_count']
+    wrong_row1 = wrong_data1[wrong_data1.na_count >= 15].row.values
+    wrong_data2 = (data < lower).sum(axis=1).reset_index()
+    wrong_data2.columns = ['row', 'na_count']
+    wrong_row2 = wrong_data2[wrong_data2.na_count >= 15].row.values
+    wrong_row = np.concatenate((wrong_row1, wrong_row2))
+    data.drop(wrong_row, axis=0, inplace=True)
+    y.drop(wrong_row, axis=0, inplace=True)
     return data, y
 
 
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     x_train = x_train.values
     y_train = y_train.values
     print('get test data...')
-    test_df = pd.read_excel('raw_data/test_a.xlsx')
+    test_df = pd.read_excel('raw_data/测试B.xlsx')
     sub_test = test_df[corr02_col]
     sub_test.fillna(sub_test.median(), inplace=True)
     x_test = sub_test.values

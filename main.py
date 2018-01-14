@@ -280,7 +280,7 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     print(scores)
     print("mean:" + str(scores.mean()))
     ans = model.predict(x_test)
-    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
+    sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
     sub_df['Y'] = ans
     sub_df.to_csv('result/submit.csv', header=None, index=False)
 
