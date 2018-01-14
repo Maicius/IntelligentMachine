@@ -121,7 +121,7 @@ if __name__ == '__main__':
     x_train = x_train.values
     y_train = y_train.values
     print('get test data...')
-    test_df = pd.read_excel('raw_data/测试B.xlsx')
+    test_df = pd.read_excel('raw_data/test_a.xlsx')
     sub_test = test_df[corr02_col]
     sub_test.fillna(sub_test.median(), inplace=True)
     x_test = sub_test.values

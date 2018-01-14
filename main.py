@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
+from sklearn.ensemble import BaggingRegressor
 from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.linear_model import Lasso
@@ -13,7 +14,8 @@ import xgboost as xgb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import PCA
 from sklearn.model_selection import GridSearchCV
-
+from sklearn import utils
+from sklearn import ensemble
 
 def pre_process_data():
     print("begin to read data")
@@ -147,8 +149,12 @@ def normalize_data(data):
 def create_model(x_train, y_train, alpha):
     print("begin to train...")
     model = Ridge(alpha=alpha)
-    model.fit(x_train, y_train)
-    return model
+    print("Begin to ensemble")
+    clf = BaggingRegressor(model, n_jobs=4)
+    print("Bagging")
+    clf.fit(x_train, y_train.ravel())
+    print("Finish")
+    return clf
 
 
 def cal_MSE(y_predict, y_real):
@@ -280,18 +286,18 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     print(scores)
     print("mean:" + str(scores.mean()))
     ans = model.predict(x_test)
-    sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
+    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
     sub_df['Y'] = ans
-    sub_df.to_csv('result/submit.csv', header=None, index=False)
+    sub_df.to_csv('result/submit_A.csv', header=None, index=False)
 
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
-    x_train, y_train, x_test = pre_process_data()
-    # 保存特征工程的结果到文件
-    x_train.to_csv('half_data/x_train.csv', header=None, index=False)
-    y_train.to_csv('half_data/y_train.csv', header=None, index=False)
-    x_test.to_csv('half_data/x_test.csv', header=None, index=False)
+    # x_train, y_train, x_test = pre_process_data()
+    # # 保存特征工程的结果到文件
+    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
     x_train = pd.read_csv('half_data/x_train.csv', header=None)
     y_train = pd.read_csv('half_data/y_train.csv', header=None)
@@ -317,7 +323,7 @@ if __name__ == '__main__':
     # 寻找L2正则的最优化alpha
     alpha = find_min_alpha(x_train, y_train)
     # 训练模型
-    # train_with_LR_L2(x_train, y_train, x_test, alpha)
+    train_with_LR_L2(x_train, y_train, x_test, alpha)
     # alpha = 890
-    train_with_xgboost(x_train, y_train, x_test, alpha)
+    # train_with_xgboost(x_train, y_train, x_test, alpha)
     # # search_cv(x_train, y_train, alpha)
