@@ -74,6 +74,7 @@ if __name__ == '__main__':
     # read train data
     print('read train...')
     train_df = pd.read_excel('raw_data/train.xlsx')
+
     print('train shape:', train_df.shape)
     # calculate the number of miss values
     col_missing_df = col_miss(train_df)
@@ -121,10 +122,14 @@ if __name__ == '__main__':
     x_train = x_train.values
     y_train = y_train.values
     print('get test data...')
-    test_df = pd.read_excel('raw_data/test_a.xlsx')
+    test_df = pd.read_excel('raw_data/测试B.xlsx')
+    test_b = pd.read_excel('raw_data/测试B.xlsx')
     sub_test = test_df[corr02_col]
+    test_b = test_b[corr02_col]
+    test_b.fillna(sub_test.median(), inplace=True)
     sub_test.fillna(sub_test.median(), inplace=True)
     x_test = sub_test.values
+
     print('x_train shape:', x_train.shape)
     print('x_test shape:', x_test.shape)
     print('build model...')

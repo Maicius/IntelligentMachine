@@ -150,11 +150,11 @@ def create_model(x_train, y_train, alpha):
     print("begin to train...")
     model = Ridge(alpha=alpha)
     print("Begin to ensemble")
-    clf = BaggingRegressor(model, n_jobs=4)
+    # clf = ensemble.BaggingRegressor(model, n_jobs=1, n_estimators=900)
     print("Bagging")
-    clf.fit(x_train, y_train.ravel())
+    model.fit(x_train, y_train.ravel())
     print("Finish")
-    return clf
+    return model
 
 
 def cal_MSE(y_predict, y_real):
@@ -286,9 +286,9 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     print(scores)
     print("mean:" + str(scores.mean()))
     ans = model.predict(x_test)
-    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
+    sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
     sub_df['Y'] = ans
-    sub_df.to_csv('result/submit_A.csv', header=None, index=False)
+    sub_df.to_csv('result/result_B.csv', header=None, index=False)
 
 
 if __name__ == '__main__':

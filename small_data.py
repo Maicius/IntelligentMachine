@@ -80,16 +80,25 @@ def do_lda(x_train, y_train):
     print(x_train_new)
     return x_train_new
 
-
+def stack_data():
+    y = pd.read_excel('raw_data/small.xlsx')
+    y = y['Y'].values
+    print(y.shape)
+    y_a = pd.read_csv('raw_data/test_a_ans.csv', header=None)
+    y_a = y_a[1].values
+    print(y_a.shape)
+    Y = np.vstack((y, y_a))
+    print(Y)
 
 if __name__ == '__main__':
     small_data = pd.read_excel('raw_data/small.xlsx')
     print(small_data.shape)
     small_data.drop(['ID'], axis=1, inplace=True)
     # remove_wrong_row(small_data)
-    small_data = change_object_to_float(small_data)
-    small_data.fillna(small_data.median(), inplace=True)
-    small_data = remove_waste_col(small_data)
-    x_train = small_data.drop(['Y'], axis=1)
-    y_train = small_data['Y']
-    x_train = do_lda(x_train.values, y_train.values)
+    # small_data = change_object_to_float(small_data)
+    # small_data.fillna(small_data.median(), inplace=True)
+    # small_data = remove_waste_col(small_data)
+    # x_train = small_data.drop(['Y'], axis=1)
+    # y_train = small_data['Y']
+    # x_train = do_lda(x_train.values, y_train.values)
+    stack_data()
