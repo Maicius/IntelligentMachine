@@ -20,13 +20,13 @@ from sklearn import ensemble
 def pre_process_data():
     print("begin to read data")
     train_data = pd.read_excel('raw_data/train.xlsx')
-    x_test = pd.read_excel('raw_data/test_a.xlsx')
+    x_test = pd.read_excel('raw_data/测试B.xlsx')
     train_data.drop(['ID'], axis=1, inplace=True)
     x_test.drop(['ID'], axis=1, inplace=True)
     # 去掉空行
     print("raw_data:" + str(train_data.shape))
+    train_data = remove_miss_row(train_data)
     nan_data_value = remove_nan_data(train_data)
-
     train_data.drop(nan_data_value, axis=1, inplace=True)
     train_data.fillna(train_data.median(), inplace=True)
     print("remove nan data:" + str(train_data.shape))
@@ -139,6 +139,13 @@ def remove_wrong_row(data, y):
     y.drop(wrong_row, axis=0, inplace=True)
     return data, y
 
+def remove_miss_row(data):
+    miss_row = data.isnull().sum(axis=1).reset_index()
+    miss_row.columns = ['row', 'miss_count']
+    miss_row_value = miss_row[miss_row.miss_count >= 200].row.values
+    data.drop(miss_row_value, axis=0, inplace=True)
+    return data
+
 
 def normalize_data(data):
     return data.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))
@@ -149,12 +156,31 @@ def normalize_data(data):
 def create_model(x_train, y_train, alpha):
     print("begin to train...")
     model = Ridge(alpha=alpha)
+
     print("Begin to ensemble")
-    # clf = ensemble.BaggingRegressor(model, n_jobs=1, n_estimators=900)
-    print("Bagging")
-    model.fit(x_train, y_train.ravel())
+
+    clf1 = ensemble.BaggingRegressor(model, n_jobs=1, n_estimators=900)
+    clf2 = ensemble.AdaBoostRegressor(n_estimators=900, learning_rate=0.01)
+    clf3 = ensemble.RandomForestRegressor(n_estimators=900)
+    clf4 = ensemble.ExtraTreesRegressor(n_estimators=900)
+    # print("Bagging")
+
+    scores = -cross_validation.cross_val_score(model, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    scores1 = -cross_validation.cross_val_score(clf1, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    scores2 = -cross_validation.cross_val_score(clf2, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    scores3 = -cross_validation.cross_val_score(clf3, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    scores4 = -cross_validation.cross_val_score(clf4, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    #
+    print('=========================')
+    print('Scores:')
+    print(scores.mean())
+    print(scores1.mean())
+    print(scores2.mean())
+    print(scores3.mean())
+    print(scores4.mean())
+    clf1.fit(x_train, y_train)
     print("Finish")
-    return model
+    return clf1
 
 
 def cal_MSE(y_predict, y_real):
@@ -220,10 +246,10 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
     model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
 
     preds = model.predict(x_test)
-    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
+    sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
     sub_df['Y'] = preds
-    sub_df.to_csv('result/xgboost4.csv', header=None, index=False)
-    print(best_scores)
+    sub_df.to_csv('result/xgboost5.csv', header=None, index=False)
+    print('xgboost:', best_scores)
 
 
 def search_cv(x_train, y_train, alpha):
@@ -288,16 +314,16 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     ans = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
     sub_df['Y'] = ans
-    sub_df.to_csv('result/result_B.csv', header=None, index=False)
+    sub_df.to_csv('result/submit_B4.csv', header=None, index=False)
 
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
-    # x_train, y_train, x_test = pre_process_data()
-    # # 保存特征工程的结果到文件
-    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
-    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
-    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
+    x_train, y_train, x_test = pre_process_data()
+    # 保存特征工程的结果到文件
+    x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
     x_train = pd.read_csv('half_data/x_train.csv', header=None)
     y_train = pd.read_csv('half_data/y_train.csv', header=None)
