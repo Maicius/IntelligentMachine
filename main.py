@@ -44,7 +44,7 @@ def pre_process_data():
     x_train = train_data
     x_train.fillna(x_train.median(), inplace=True)
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.21]
+    corr02 = corr_df[corr_df.corr_value >= 0.23]
     corr02_col = corr02['col'].values.tolist()
     x_train = x_train[corr02_col]
     x_test = x_test[corr02_col]
@@ -315,7 +315,7 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     ans = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
     sub_df['Value'] = ans
-    sub_df.to_csv('result/submitB_A3.csv', header=None, index=False)
+    sub_df.to_csv('result/submitB_A4.csv', header=None, index=False)
 
 
 if __name__ == '__main__':
