@@ -17,10 +17,11 @@ from sklearn.model_selection import GridSearchCV
 from sklearn import utils
 from sklearn import ensemble
 
+
 def pre_process_data():
     print("begin to read data")
-    train_data = pd.read_excel('raw_data/train.xlsx')
-    x_test = pd.read_excel('raw_data/测试B.xlsx')
+    train_data = pd.read_excel('raw_data/训练_20180117.xlsx')
+    x_test = pd.read_excel('raw_data/测试A_20180117.xlsx')
     train_data.drop(['ID'], axis=1, inplace=True)
     x_test.drop(['ID'], axis=1, inplace=True)
     # 去掉空行
@@ -37,8 +38,8 @@ def pre_process_data():
     print(train_data.shape)
     train_data = remove_waste_col(train_data)
     print(train_data.shape)
-    y_train = train_data['Y']
-    train_data.drop(['Y'], axis=1, inplace=True)
+    y_train = train_data['Value']
+    train_data.drop(['Value'], axis=1, inplace=True)
     # x_train = normalize_data(train_data)
     x_train = train_data
     x_train.fillna(x_train.median(), inplace=True)
@@ -119,7 +120,7 @@ def remove_waste_col(data):
     same_num_col = []
     for col in columns:
         max_num = data[col].max()
-        if max_num != data[col].min() and max_num < 1e13and str(max_num).find('2017') == -1 and str(max_num).find(
+        if max_num != data[col].min() and max_num < 1e13 and str(max_num).find('2017') == -1 and str(max_num).find(
                 '2016') == -1:
             same_num_col.append(col)
     return data[same_num_col]
@@ -142,7 +143,7 @@ def remove_wrong_row(data, y):
 def remove_miss_row(data):
     miss_row = data.isnull().sum(axis=1).reset_index()
     miss_row.columns = ['row', 'miss_count']
-    miss_row_value = miss_row[miss_row.miss_count >= 200].row.values
+    miss_row_value = miss_row[miss_row.miss_count >= 500].row.values
     data.drop(miss_row_value, axis=0, inplace=True)
     return data
 
@@ -247,7 +248,7 @@ def train_with_xgboost(x_train, y_train, x_test, alpha):
 
     preds = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
-    sub_df['Y'] = preds
+    sub_df['Value'] = preds
     sub_df.to_csv('result/xgboost5.csv', header=None, index=False)
     print('xgboost:', best_scores)
 
@@ -271,7 +272,7 @@ def search_cv(x_train, y_train, alpha):
     clf.fit(x_train, y_train)
     preds = clf.score(x_test)
     sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
-    sub_df['Y'] = preds
+    sub_df['Value'] = preds
     sub_df.to_csv('result/xgboost3.csv', header=None, index=False)
     best_parameters, score, _ = max(clf.grid_scores_, key=lambda x: x[1])
     print('Raw RMSE:', score)
@@ -312,9 +313,9 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     print(scores)
     print("mean:" + str(scores.mean()))
     ans = model.predict(x_test)
-    sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
-    sub_df['Y'] = ans
-    sub_df.to_csv('result/submit_B4.csv', header=None, index=False)
+    sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
+    sub_df['Value'] = ans
+    sub_df.to_csv('result/submitB_A3.csv', header=None, index=False)
 
 
 if __name__ == '__main__':

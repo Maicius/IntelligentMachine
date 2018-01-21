@@ -73,7 +73,7 @@ def remove_wrong_row(data, y):
 if __name__ == '__main__':
     # read train data
     print('read train...')
-    train_df = pd.read_excel('raw_data/train.xlsx')
+    train_df = pd.read_excel('raw_data/训练_20180117.xlsx')
 
     print('train shape:', train_df.shape)
     # calculate the number of miss values
@@ -111,10 +111,10 @@ if __name__ == '__main__':
                    float64_uniq_col]
     print('deleted unique cols, and float cols count:', len(float64_col))
     # obtained corrcoef greater than 0.2
-    float64_col.remove('Y')
-    y_train = train_df['Y']
+    float64_col.remove('Value')
+    y_train = train_df['Value']
     corr_df = cal_corrcoef(float_df, y_train, float64_col)
-    corr02 = corr_df[corr_df.corr_value >= 0.2]
+    corr02 = corr_df[corr_df.corr_value >= 0.22]
     corr02_col = corr02['col'].values.tolist()
     print('get x_train')
     x_train = float_df[corr02_col]
@@ -122,11 +122,8 @@ if __name__ == '__main__':
     x_train = x_train.values
     y_train = y_train.values
     print('get test data...')
-    test_df = pd.read_excel('raw_data/测试B.xlsx')
-    test_b = pd.read_excel('raw_data/测试B.xlsx')
+    test_df = pd.read_excel('raw_data/测试A_20180117.xlsx')
     sub_test = test_df[corr02_col]
-    test_b = test_b[corr02_col]
-    test_b.fillna(sub_test.median(), inplace=True)
     sub_test.fillna(sub_test.median(), inplace=True)
     x_test = sub_test.values
 
