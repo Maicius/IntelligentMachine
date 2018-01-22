@@ -4,7 +4,7 @@ import xlrd
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
 from sklearn import preprocessing
-from main import find_min_alpha, train_with_LR_L2, train_with_xgboost
+from main import find_min_alpha, train_with_LR_L2
 
 #### calculate miss values
 def col_miss(train_df):

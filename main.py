@@ -3,16 +3,12 @@
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
-from sklearn.ensemble import BaggingRegressor
-from sklearn.model_selection import StratifiedKFold
+
 from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.linear_model import Lasso
 from sklearn import cross_validation
-from sklearn.linear_model import SGDRegressor
 import matplotlib.pyplot as plt
 import xgboost as xgb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.decomposition import PCA
 from sklearn.model_selection import GridSearchCV
 from sklearn import utils
 from sklearn import ensemble
@@ -64,9 +60,8 @@ def pre_process_data():
     x_test = x_test[corr02_col]
     print("去除皮尔森系数较小的维数:", y_train.shape, x_train.shape)
 
-
     # 填充测试集中的缺失值
-    x_test.fillna(x_test.median(axis=0), inplace=True)
+    x_test.fillna(x_test.median(axis=0), axis=0, inplace=True)
     x_test = change_object_to_float(x_test)
 
     print("Finish preprocess")
@@ -79,7 +74,7 @@ def remove_miss_col(data):
     nan_data = data.isnull().sum(axis=0).reset_index()
     nan_data.columns = ['col', 'nan_count']
     nan_data = nan_data.sort_values(by='nan_count')
-    nan_data_value = nan_data[nan_data.nan_count > 70].col.values
+    nan_data_value = nan_data[nan_data.nan_count > 40].col.values
     data.drop(nan_data_value, axis=1, inplace=True)
     return data
 
@@ -178,9 +173,6 @@ def normalize_data(data):
 def create_model(x_train, y_train, alpha):
     print("begin to train...")
     model = Ridge(alpha=alpha)
-
-    print("Begin to ensemble")
-
     clf1 = ensemble.BaggingRegressor(model, n_jobs=1, n_estimators=900)
     clf2 = ensemble.AdaBoostRegressor(n_estimators=900, learning_rate=0.01)
     clf3 = ensemble.RandomForestRegressor(n_estimators=900)
@@ -232,67 +224,23 @@ def find_min_alpha(x_train, y_train):
     return alpha
 
 
-def train_with_xgboost(x_train, y_train, x_test, alpha):
-    params = {
-        'booster': 'gblinear',
-        'silent': 0,
-        'eta': 0.01,
-        'lambda': alpha,
-        'objective': 'reg:linear'
-    }
-    # 划分训练数据集与验证数据集
-    offset = 394
-    num_rounds = 10000
-    # 划分训练集与验证集
-    offsets = [485]
-    best_scores = []
-    x_test = xgb.DMatrix(x_test)
-    for offset in offsets:
-        xgtrain = xgb.DMatrix(x_train[:offset], label=y_train[:offset])
-        xgval = xgb.DMatrix(x_train[offset - 100:], label=y_train[offset - 100:])
-        # return 训练和验证的错误率
-        watchlist = [(xgtrain, 'train'), (xgval, 'val')]
-        # begin to train
-        print("Begin to train with xgboost")
-        model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
-        best_scores.append((offset, model.best_score))
-    best_scores = sorted(best_scores, key=lambda x: x[1], reverse=False)
-    plot_image(list(map(lambda x: x[0], best_scores)), list(map(lambda x: x[1], best_scores)))
-    offset = best_scores[0][0]
-    xgtrain = xgb.DMatrix(x_train[:offset], label=y_train[:offset])
-    xgval = xgb.DMatrix(x_train[offset:], label=y_train[offset:])
-    # return 训练和验证的错误率
-    watchlist = [(xgtrain, 'train'), (xgval, 'val')]
-    # begin to train
-    print("Begin to train with xgboost")
-    model = xgb.train(params, xgtrain, num_rounds, watchlist, early_stopping_rounds=50)
-
-    preds = model.predict(x_test)
-    sub_df = pd.read_csv('raw_data/submit_B.csv', header=None)
-    sub_df['Value'] = preds
-    sub_df.to_csv('result/xgboost5.csv', header=None, index=False)
-    print('xgboost:', best_scores)
-
-
-def search_cv(x_train, y_train, alpha):
-    # x_train = xgb.DMatrix(x_train)
-    # y_train1 = xgb.DMatrix(y_train)
+def search_cv(x_train, y_train, x_test):
     xgb_model = xgb.XGBModel()
     params = {
         'booster': ['gblinear'],
-        'silent': [0],
-        'eta': [x for x in np.round(np.linspace(0.01, 0.5, 10), 2)],
-        'lambda': [alpha],
+        'silent': [1],
+        'learning_rate': [x for x in np.round(np.linspace(0.01, 0.5, 10), 2)],
+        'reg_lambda': [lambd for lambd in np.logspace(0, 3, 50)],
         'objective': ['reg:linear']
     }
+    print('begin')
     clf = GridSearchCV(xgb_model, params,
-                       cv=StratifiedKFold(10, shuffle=True),
                        scoring='neg_mean_squared_error',
                        refit=True)
 
     clf.fit(x_train, y_train)
-    preds = clf.score(x_test)
-    sub_df = pd.read_csv('raw_data/sub_a.csv', header=None)
+    preds = clf.predict(x_test)
+    sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
     sub_df['Value'] = preds
     sub_df.to_csv('result/xgboost3.csv', header=None, index=False)
     best_parameters, score, _ = max(clf.grid_scores_, key=lambda x: x[1])
@@ -337,7 +285,7 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     ans = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
     sub_df['Value'] = ans
-    sub_df.to_csv('result/submitB_A4.csv', header=None, index=False)
+    sub_df.to_csv('result/submitB_A5.csv', header=None, index=False)
 
 
 if __name__ == '__main__':
@@ -360,18 +308,11 @@ if __name__ == '__main__':
     X = preprocessing.scale(X)
     x_train = X[0:len(x_train)]
     x_test = X[len(x_train):]
-    # LDA降维
-    # lda = LinearDiscriminantAnalysis(n_components=100)
-    # lda.fit(x_train, y_train)
-    # pca = PCA(n_components=120, copy=False)
-    # x_train = pca.fit_transform(x_train)
-    # x_test = pca.fit_transform(x_test)
-    print("降低纬度:")
+    print("开始训练:")
     print(x_train.shape, y_train.shape)
     # 寻找L2正则的最优化alpha
     alpha = find_min_alpha(x_train, y_train)
     # 训练模型
     train_with_LR_L2(x_train, y_train, x_test, alpha)
-    # alpha = 890
-    # train_with_xgboost(x_train, y_train, x_test, alpha)
-    # # search_cv(x_train, y_train, alpha)
+    # xgboost 调参
+    # search_cv(x_train, y_train, x_test)
