@@ -22,71 +22,65 @@ def pre_process_data():
     print("begin to read data")
     train_data = pd.read_excel('raw_data/训练_20180117.xlsx')
     x_test = pd.read_excel('raw_data/测试A_20180117.xlsx')
+
+    # remove ID column
     train_data.drop(['ID'], axis=1, inplace=True)
     x_test.drop(['ID'], axis=1, inplace=True)
-    # 去掉空行
-    print("raw_data:" + str(train_data.shape))
+    print("raw_data:", train_data.shape, x_test.shape)
+    # 去掉缺失值过多的行
     train_data = remove_miss_row(train_data)
-    nan_data_value = remove_nan_data(train_data)
-    train_data.drop(nan_data_value, axis=1, inplace=True)
-    train_data.fillna(train_data.median(), inplace=True)
-    print("remove nan data:" + str(train_data.shape))
-    float_data = change_object_to_float(train_data)
-    # train_data = remove_date(train_data)
-    train_data = float_data
-    print(float_data.shape)
-    print(train_data.shape)
+    print("remove miss row:", train_data.shape)
+
+    # 去掉缺失值过多的列
+    train_data = remove_miss_col(train_data)
+    print("remove miss col:", train_data.shape)
+
+    # 填补缺失值
+    train_data.fillna(train_data.median(axis=0), axis=0, inplace=True)
+    print("填充缺失值:" + str(train_data.shape))
+
+    # 将字母属性转化为浮点数
+    train_data = change_object_to_float(train_data)
+
+    # 去掉日期列以及数据过大的列
     train_data = remove_waste_col(train_data)
-    print(train_data.shape)
-    y_train = train_data['Value']
-    train_data.drop(['Value'], axis=1, inplace=True)
-    # x_train = normalize_data(train_data)
-    x_train = train_data
-    x_train.fillna(x_train.median(), inplace=True)
+    print("去掉日期列以及数据过大的列:", train_data.shape)
+
+    # 去除不符合正太分布的行
+    x_train = remove_wrong_row(train_data)
+    print("去除不符合正太分布的行数:", x_train.shape)
+
+    # 分割标签与数据
+    y_train = x_train['Value']
+    x_train.drop(['Value'], axis=1, inplace=True)
+    print("分割数据", y_train.shape, x_train.shape)
+
+    # 计算皮尔森系数，降低维度
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.23]
+    corr02 = corr_df[corr_df.corr_value >= 0.21]
     corr02_col = corr02['col'].values.tolist()
-    x_train = x_train[corr02_col]
+    # 获取最终训练集与测试集
+    x_train = train_data[corr02_col]
     x_test = x_test[corr02_col]
-    # x_test = normalize_data(x_test)
-    x_test.fillna(x_test.median(), inplace=True)
+    print("去除皮尔森系数较小的维数:", y_train.shape, x_train.shape)
+
+
+    # 填充测试集中的缺失值
+    x_test.fillna(x_test.median(axis=0), inplace=True)
     x_test = change_object_to_float(x_test)
-    x_train, y = remove_wrong_row(x_train, y_train)
+
     print("Finish preprocess")
     print(x_train.shape, y_train.shape)
     return x_train, y_train, x_test
 
 
-def remove_nan_data(data):
+# 去除缺失值过多的列
+def remove_miss_col(data):
     nan_data = data.isnull().sum(axis=0).reset_index()
     nan_data.columns = ['col', 'nan_count']
     nan_data = nan_data.sort_values(by='nan_count')
-    nan_data_value = nan_data[nan_data.nan_count > 200].col.values
-    print("nan_data_value:" + str(nan_data_value))
-
-    return nan_data_value
-
-
-def change_object_to_float(data):
-    print(data.shape)
-    data_type = data.dtypes.reset_index()
-    data_type.columns = ['col', 'dtype']
-    set_object = set('A')
-    dict_object = {}
-    data_object_col = data_type[data_type.dtype == 'object'].col.values
-    data_object = data[data_object_col]
-    i = 0.0
-    for object in data_object:
-        set_object = set(data_object[object].values) | set_object
-        print(set_object)
-    for item in set_object:
-        dict_object[item] = i
-        i += 1.0
-    print(dict_object)
-    for col in data_object_col:
-        for i in range(len(data[col].values)):
-            data[col].values[i] = dict_object[data[col].values[i]]
-
+    nan_data_value = nan_data[nan_data.nan_count > 70].col.values
+    data.drop(nan_data_value, axis=1, inplace=True)
     return data
 
 
@@ -96,9 +90,32 @@ def remove_no_float(data):
     data_type.columns = ['col', 'dtype']
     data_object = data_type[data_type.dtype == 'object'].col.values
     data_object = data[data_object]
-
     data_object.to_csv('half_data/non_float_col.csv', index=False)
     return data_type[data_type.dtype == 'float64'].col.values
+
+
+def fill_null(data):
+    pass
+
+
+def change_object_to_float(data):
+    data_type = data.dtypes.reset_index()
+    data_type.columns = ['col', 'dtype']
+    set_object = set('A')
+    dict_object = {}
+    data_object_col = data_type[data_type.dtype == 'object'].col.values
+    data_object = data[data_object_col]
+    i = 0.0
+    for object in data_object:
+        set_object = set(data_object[object].values) | set_object
+    for item in set_object:
+        dict_object[item] = i
+        i += 1.0
+    # print(dict_object)
+    for col in data_object_col:
+        for i in range(len(data[col].values)):
+            data[col].values[i] = dict_object[data[col].values[i]]
+    return data
 
 
 # 计算协方差
@@ -106,43 +123,47 @@ def cal_corrcoef(float_df, y_train):
     corr_values = []
     float_col = list(float_df.columns)
     for col in float_col:
-        corr_values.append(abs(np.corrcoef(float_df[col].values, y_train) \
+        corr_values.append(abs(np.corrcoef(float_df[col].values.astype(float), y_train) \
                                    [0, 1]))
     corr_df = pd.DataFrame({'col': float_col, 'corr_value': corr_values})
     corr_df = corr_df.sort_values(by='corr_value', ascending=False)
-
     return corr_df
 
 
 # 去掉数字相同的列以及日期列
 def remove_waste_col(data):
     columns = list(data.columns)
-    same_num_col = []
+    date_col = []
     for col in columns:
         max_num = data[col].max()
         if max_num != data[col].min() and max_num < 1e13 and str(max_num).find('2017') == -1 and str(max_num).find(
                 '2016') == -1:
-            same_num_col.append(col)
-    return data[same_num_col]
+            date_col.append(col)
+    return data[date_col]
 
 
-def remove_wrong_row(data, y):
-    upper = data.mean() + 3 * data.std()
-    lower = data.mean() - 3 * data.std()
+# 去除不符合正太分布的行
+def remove_wrong_row(data):
+    upper = data.mean(axis=0) + 3 * data.std(axis=0)
+    lower = data.mean(axis=0) - 3 * data.std(axis=0)
+
     wrong_data1 = (data > upper).sum(axis=1).reset_index()
     wrong_data1.columns = ['row', 'na_count']
-    wrong_row1 = wrong_data1[wrong_data1.na_count >= 15].row.values
+    # 参数是经过调试的
+    wrong_row1 = wrong_data1[wrong_data1.na_count >= 40].row.values
     wrong_data2 = (data < lower).sum(axis=1).reset_index()
     wrong_data2.columns = ['row', 'na_count']
-    wrong_row2 = wrong_data2[wrong_data2.na_count >= 15].row.values
+    wrong_row2 = wrong_data2[wrong_data2.na_count >= 95].row.values
     wrong_row = np.concatenate((wrong_row1, wrong_row2))
+
     data.drop(wrong_row, axis=0, inplace=True)
-    y.drop(wrong_row, axis=0, inplace=True)
-    return data, y
+    return data
+
 
 def remove_miss_row(data):
     miss_row = data.isnull().sum(axis=1).reset_index()
     miss_row.columns = ['row', 'miss_count']
+    # 移除缺失值大于500的行
     miss_row_value = miss_row[miss_row.miss_count >= 500].row.values
     data.drop(miss_row_value, axis=0, inplace=True)
     return data
@@ -291,6 +312,7 @@ def plot_image(x, y, x_label=None, y_label=None):
     plt.ylabel(y_label)
     plt.show()
 
+
 def do_lda(x_train, y_train):
     print("Begin LDA。。。")
     lab_enc = preprocessing.LabelEncoder()
@@ -336,7 +358,6 @@ if __name__ == '__main__':
     X = np.vstack((x_train, x_test))
     # normalize数据
     X = preprocessing.scale(X)
-
     x_train = X[0:len(x_train)]
     x_test = X[len(x_train):]
     # LDA降维
