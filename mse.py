@@ -4,7 +4,7 @@ from main import cal_MSE
 yesterday = pd.read_csv('result/submitB_A4-0.02227.csv', header=None)
 today = pd.read_csv('result/submitB_A2-0.03620.csv', header=None)
 yesterday = yesterday[1]
-today = today[1]git
+today = today[1]
 print(cal_MSE(yesterday, today))
 pass
 
