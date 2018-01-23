@@ -74,7 +74,7 @@ def remove_miss_col(data):
     nan_data = data.isnull().sum(axis=0).reset_index()
     nan_data.columns = ['col', 'nan_count']
     nan_data = nan_data.sort_values(by='nan_count')
-    nan_data_value = nan_data[nan_data.nan_count > 40].col.values
+    nan_data_value = nan_data[nan_data.nan_count > 20].col.values
     data.drop(nan_data_value, axis=1, inplace=True)
     return data
 
@@ -224,6 +224,7 @@ def find_min_alpha(x_train, y_train):
     return alpha
 
 
+# 对xgboost调参并训练
 def search_cv(x_train, y_train, x_test):
     xgb_model = xgb.XGBModel()
     params = {
@@ -285,8 +286,11 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     ans = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
     sub_df['Value'] = ans
-    sub_df.to_csv('result/submitB_A5.csv', header=None, index=False)
+    sub_df.to_csv('result/submitB_A6.csv', header=None, index=False)
 
+
+def get_top_n_features():
+    pass
 
 if __name__ == '__main__':
     # 数据预处理，特征工程

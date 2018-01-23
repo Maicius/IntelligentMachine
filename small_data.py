@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from main import remove_waste_col
+from main import remove_waste_col, remove_miss_row, remove_miss_col, remove_no_float
 from main import remove_no_float
 import numpy as np
 from sklearn import preprocessing
@@ -80,6 +80,7 @@ def do_lda(x_train, y_train):
     print(x_train_new)
     return x_train_new
 
+
 def stack_data():
     y = pd.read_excel('raw_data/small.xlsx')
     y = y['Y'].values
@@ -90,8 +91,24 @@ def stack_data():
     Y = np.vstack((y, y_a))
     print(Y)
 
+
+def knn_fill_nan(data):
+    col_values = remove_no_float(data)
+    data = data[col_values]
+    data_row = data.isnull().sum(axis=1).reset_index()
+    data_row.columns = ['row', 'nan_count']
+    data_row_nan = data_row[data_row.nan_count > 0].row.values
+    data_no_nan = data.drop(data_row_nan, axis=0)
+
+    data_col = data_no_nan.isnull().sum(axis=0).reset_index()
+    data_col.columns = ['col', 'nan_count']
+    data_col_no_nan = data_col[data_col.nan_count == 0].col.values
+
+    no_nan_row = data
+    pass
+
 if __name__ == '__main__':
-    small_data = pd.read_excel('raw_data/small.xlsx')
+    small_data = pd.read_excel('small.xlsx')
     print(small_data.shape)
     small_data.drop(['ID'], axis=1, inplace=True)
     # remove_wrong_row(small_data)
@@ -101,4 +118,7 @@ if __name__ == '__main__':
     # x_train = small_data.drop(['Y'], axis=1)
     # y_train = small_data['Y']
     # x_train = do_lda(x_train.values, y_train.values)
+    small_data = remove_miss_col(small_data)
+    small_data = remove_miss_row(small_data)
+    small_data = knn_fill_nan(small_data)
     stack_data()
