@@ -99,7 +99,19 @@ def knn_fill_nan(data):
     data_row.columns = ['row', 'nan_count']
     data_row_nan = data_row[data_row.nan_count > 0].row.values
     data_no_nan = data.drop(data_row_nan, axis=0)
+    data_nan = data.loc[data_row_nan]
+    for row in data_row_nan:
+        # 广播，矩阵 - 向量
+        data_diff = data_no_nan - data_nan.loc[row]
 
+        # 求欧式距离
+        # data_diff = data_diff.apply(lambda x: x**2)
+        data_diff = (data_diff**2).sum(axis=1)
+        data_diff = data_diff.apply(lambda x: np.sqrt(x)).reset_index()
+        data_diff.columns = ['row', 'diff_val']
+        data_diff_sum = data_diff.sort_values(by='diff_val')
+
+        pass
     data_col = data_no_nan.isnull().sum(axis=0).reset_index()
     data_col.columns = ['col', 'nan_count']
     data_col_no_nan = data_col[data_col.nan_count == 0].col.values
@@ -121,4 +133,4 @@ if __name__ == '__main__':
     small_data = remove_miss_col(small_data)
     small_data = remove_miss_row(small_data)
     small_data = knn_fill_nan(small_data)
-    stack_data()
+    # stack_data()
