@@ -3,13 +3,14 @@
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
+from sklearn.ensemble import RandomForestRegressor
 
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn import cross_validation
 import matplotlib.pyplot as plt
 import xgboost as xgb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, cross_val_score, ShuffleSplit
 from sklearn import utils
 from sklearn import ensemble
 
@@ -54,14 +55,14 @@ def pre_process_data():
     print("分割数据", y_train.shape, x_train.shape)
 
     # 计算皮尔森系数，降低维度
-    corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value >= 0.21]
-    corr02_col = corr02['col'].values.tolist()
+    x_train = calculate_corr(x_train, y_train)
+    print('皮尔森系数计算完成:', x_train.shape)
 
+    top_n_feature = ensemble_model_feature(x_train, y_train, 150)
     # 将训练集的col应用到测试集
-    x_train = train_data[corr02_col]
-    x_test = x_test[corr02_col]
-    print("去除皮尔森系数较小的维数:", y_train.shape, x_train.shape, x_test.shape)
+    x_train = train_data[top_n_feature]
+    x_test = x_test[top_n_feature]
+    print("模型融合筛选特征:", y_train.shape, x_train.shape, x_test.shape)
 
     # 填充测试集中的缺失值
     # x_test = change_object_to_float(x_test)
@@ -75,6 +76,12 @@ def pre_process_data():
     print(x_train.shape, y_train.shape, x_test.shape)
     return x_train, y_train, x_test
 
+
+def calculate_corr(x_train, y_train):
+    corr_df = cal_corrcoef(x_train, y_train)
+    corr02 = corr_df[corr_df.corr_value > 0.1]
+    corr02_col = corr02['col'].values.tolist()
+    return x_train[corr02_col]
 
 # 去除缺失值过多的列
 def remove_miss_col(data):
@@ -92,6 +99,7 @@ def remove_nan_col(data):
     col_val.columns = ['col', 'nan_val']
     not_nan_col_val = col_val[col_val.nan_val == 0].col.values
     return not_nan_col_val
+
 
 #  删除非数字列
 def remove_no_float(data):
@@ -354,6 +362,44 @@ def knn_fill_nan(data, K):
         # print(data_no_nan.shape)
     print('填补缺失值完成')
     return data_no_nan
+
+
+def ensemble_model_feature(X, Y, top_n_features):
+    features = list(X)
+
+    # 随机森林
+    rf = ensemble.RandomForestRegressor()
+    rf_param_grid = {'n_estimators': [900], 'random_state': [8]}
+    rf_grid = GridSearchCV(rf, rf_param_grid, cv=10, verbose=1, n_jobs=10)
+    rf_grid.fit(X, Y)
+    top_n_features_rf = get_top_k_feature(features=features, model=rf_grid, top_n_features=top_n_features)
+    print('RF 选择完毕')
+    # Adaboost
+    abr = ensemble.AdaBoostRegressor()
+    abr_grid = GridSearchCV(abr, rf_param_grid, cv=10, n_jobs=10)
+    abr_grid.fit(X, Y)
+    top_n_features_bgr = get_top_k_feature(features=features, model=abr_grid, top_n_features=top_n_features)
+    print('Adaboost 选择完毕')
+    # ExtraTree
+    etr = ensemble.ExtraTreesRegressor()
+    etr_grid = GridSearchCV(etr, rf_param_grid, cv=10, n_jobs=10)
+    etr_grid.fit(X, Y)
+    top_n_features_etr = get_top_k_feature(features=features, model=etr_grid, top_n_features=top_n_features)
+    print('ETR 选择完毕')
+    # 融合以上三个模型
+    features_top_n = pd.concat([top_n_features_rf, top_n_features_bgr, top_n_features_etr],
+                               ignore_index=True).drop_duplicates()
+    print(features_top_n)
+    return features_top_n
+
+
+def get_top_k_feature(features, model, top_n_features):
+    feature_imp_sorted_rf = pd.DataFrame({'feature': features,
+                                          'importance': model.best_estimator_.feature_importances_}).sort_values(
+        'importance', ascending=False)
+    features_top_n = feature_imp_sorted_rf.head(top_n_features)['feature']
+    top_n_features = features_top_n[:top_n_features]
+    return top_n_features
 
 
 if __name__ == '__main__':

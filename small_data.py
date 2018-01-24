@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from main import remove_waste_col, remove_miss_row, remove_miss_col, remove_no_float, knn_fill_nan
+from main import remove_waste_col, remove_miss_row, remove_miss_col, remove_no_float, knn_fill_nan, ensemble_model_feature
 from main import remove_no_float
 import numpy as np
 from sklearn import preprocessing
@@ -96,16 +96,24 @@ def stack_data():
 if __name__ == '__main__':
     small_data = pd.read_excel('small.xlsx')
     print(small_data.shape)
+
     small_data.drop(['ID'], axis=1, inplace=True)
     # remove_wrong_row(small_data)
     small_data = change_object_to_float(small_data)
-    # small_data.fillna(small_data.median(), inplace=True)
+    # # small_data.fillna(small_data.median(), inplace=True)
     small_data = remove_waste_col(small_data)
-    # x_train = small_data.drop(['Y'], axis=1)
-    # y_train = small_data['Y']
-    # x_train = do_lda(x_train.values, y_train.values)
+    # # x_train = small_data.drop(['Y'], axis=1)
+
+    # # x_train = do_lda(x_train.values, y_train.values)
     small_data = remove_miss_col(small_data)
     small_data = remove_miss_row(small_data)
     small_data = knn_fill_nan(small_data, 9)
-    small_data.to_excel('small_data2.xlsx')
+    small_data.fillna(small_data.median(), inplace=True)
+    print(np.any(np.isnan(small_data)))
+    print(np.any(np.isfinite(small_data)))
+    Y = small_data['Y']
+    small_data.drop(['Y'], axis=1, inplace=True)
+    print(small_data.shape, Y.shape)
+    # small_data.to_excel('small_data2.xlsx')
     # stack_data()
+    ensemble_model_feature(small_data, Y, 10)
