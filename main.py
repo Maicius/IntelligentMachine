@@ -31,12 +31,14 @@ def pre_process_data():
     train_data = remove_miss_col(train_data)
     print("remove miss col:", train_data.shape)
 
-    # 填补缺失值
-    train_data.fillna(train_data.median(axis=0), axis=0, inplace=True)
-    print("填充缺失值:" + str(train_data.shape))
-
     # 将字母属性转化为浮点数
-    train_data = change_object_to_float(train_data)
+    # train_data = change_object_to_float(train_data)
+    train_data = remove_no_float(train_data)
+    print("remove not float:", train_data.shape)
+
+    # 填补缺失值
+    train_data = knn_fill_nan(train_data, 9)
+    print("填充缺失值:" + str(train_data.shape))
 
     # 去掉日期列以及数据过大的列
     train_data = remove_waste_col(train_data)
@@ -55,17 +57,22 @@ def pre_process_data():
     corr_df = cal_corrcoef(x_train, y_train)
     corr02 = corr_df[corr_df.corr_value >= 0.21]
     corr02_col = corr02['col'].values.tolist()
-    # 获取最终训练集与测试集
+
+    # 将训练集的col应用到测试集
     x_train = train_data[corr02_col]
     x_test = x_test[corr02_col]
-    print("去除皮尔森系数较小的维数:", y_train.shape, x_train.shape)
+    print("去除皮尔森系数较小的维数:", y_train.shape, x_train.shape, x_test.shape)
 
     # 填充测试集中的缺失值
-    x_test.fillna(x_test.median(axis=0), axis=0, inplace=True)
-    x_test = change_object_to_float(x_test)
+    # x_test = change_object_to_float(x_test)
+    x_test = knn_fill_nan(x_test, 9)
+    # KNN填充之后依然有少数列由于缺失过多数据而无法填充,所以直接去掉这些列
+    not_nan_col_val = remove_nan_col(x_test)
+    x_test = x_test[not_nan_col_val]
+    x_train = x_train[not_nan_col_val]
 
     print("Finish preprocess")
-    print(x_train.shape, y_train.shape)
+    print(x_train.shape, y_train.shape, x_test.shape)
     return x_train, y_train, x_test
 
 
@@ -74,10 +81,17 @@ def remove_miss_col(data):
     nan_data = data.isnull().sum(axis=0).reset_index()
     nan_data.columns = ['col', 'nan_count']
     nan_data = nan_data.sort_values(by='nan_count')
-    nan_data_value = nan_data[nan_data.nan_count > 20].col.values
+    # 缺失值大于200的列基本上都是全部缺失
+    nan_data_value = nan_data[nan_data.nan_count > 200].col.values
     data.drop(nan_data_value, axis=1, inplace=True)
     return data
 
+
+def remove_nan_col(data):
+    col_val = data.isnull().sum(axis=0).reset_index()
+    col_val.columns = ['col', 'nan_val']
+    not_nan_col_val = col_val[col_val.nan_val == 0].col.values
+    return not_nan_col_val
 
 #  删除非数字列
 def remove_no_float(data):
@@ -86,13 +100,11 @@ def remove_no_float(data):
     data_object = data_type[data_type.dtype == 'object'].col.values
     data_object = data[data_object]
     data_object.to_csv('half_data/non_float_col.csv', index=False)
-    return data_type[data_type.dtype == 'float64'].col.values
+    col_val = data_type[data_type.dtype == 'float64'].col.values
+    return data[col_val]
 
 
-def fill_null(data):
-    pass
-
-
+# 将object类型数据映射为float类型
 def change_object_to_float(data):
     data_type = data.dtypes.reset_index()
     data_type.columns = ['col', 'dtype']
@@ -113,7 +125,7 @@ def change_object_to_float(data):
     return data
 
 
-# 计算协方差
+# 计算协方差 主要降维手段
 def cal_corrcoef(float_df, y_train):
     corr_values = []
     float_col = list(float_df.columns)
@@ -128,13 +140,13 @@ def cal_corrcoef(float_df, y_train):
 # 去掉数字相同的列以及日期列
 def remove_waste_col(data):
     columns = list(data.columns)
-    date_col = []
+    not_date_col = []
     for col in columns:
         max_num = data[col].max()
         if max_num != data[col].min() and max_num < 1e13 and str(max_num).find('2017') == -1 and str(max_num).find(
                 '2016') == -1:
-            date_col.append(col)
-    return data[date_col]
+            not_date_col.append(col)
+    return data[not_date_col]
 
 
 # 去除不符合正太分布的行
@@ -155,6 +167,7 @@ def remove_wrong_row(data):
     return data
 
 
+# 移除缺失值过大的行
 def remove_miss_row(data):
     miss_row = data.isnull().sum(axis=1).reset_index()
     miss_row.columns = ['row', 'miss_count']
@@ -164,12 +177,14 @@ def remove_miss_row(data):
     return data
 
 
+# 自定义规范化数据
 def normalize_data(data):
     return data.apply(lambda x: (x - np.min(x)) / (np.max(x) - np.min(x)))
     # return preprocessing.scale(data, axis=0)
     # return data.apply(lambda x: (x - np.average(x)) / np.std(x))
 
 
+# 构建融合模型，选择最好的融合结果
 def create_model(x_train, y_train, alpha):
     print("begin to train...")
     model = Ridge(alpha=alpha)
@@ -197,12 +212,14 @@ def create_model(x_train, y_train, alpha):
     return clf1
 
 
+# 计算MSE
 def cal_MSE(y_predict, y_real):
     n = len(y_predict)
     print("样本数量:" + str(n))
     return np.sum(np.square(y_predict - y_real)) / n
 
 
+# 找到Ridge最佳的正则值
 def find_min_alpha(x_train, y_train):
     alphas = np.logspace(-2, 3, 200)
     # print(alphas)
@@ -250,10 +267,7 @@ def search_cv(x_train, y_train, x_test):
         print("%s: %r" % (param_name, best_parameters[param_name]))
 
 
-def find_best_offset():
-    pass
-
-
+# 绘图
 def plot_image(x, y, x_label=None, y_label=None):
     plt.plot(x, y)
     plt.title("cross val score")
@@ -262,6 +276,7 @@ def plot_image(x, y, x_label=None, y_label=None):
     plt.show()
 
 
+# LDA降维
 def do_lda(x_train, y_train):
     print("Begin LDA。。。")
     lab_enc = preprocessing.LabelEncoder()
@@ -289,8 +304,57 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     sub_df.to_csv('result/submitB_A6.csv', header=None, index=False)
 
 
-def get_top_n_features():
-    pass
+def knn_fill_nan(data, K):
+    # print("raw_data shape:", raw_data.shape)
+    # # col_values = remove_no_float(raw_data)
+    # data = raw_data[col_values]
+    # print("remove no float col shape: ", data.shape)
+
+    # 计算每一行的空值，如有空值则进行填充，没有空值的行用于做训练数据
+    data_row = data.isnull().sum(axis=1).reset_index()
+    data_row.columns = ['raw_row', 'nan_count']
+    # 空值行（需要填充的行）
+    data_row_nan = data_row[data_row.nan_count > 0].raw_row.values
+
+    # 非空行 原始数据
+    data_no_nan = data.drop(data_row_nan, axis=0)
+
+    # 空行 原始数据
+    data_nan = data.loc[data_row_nan]
+    for row in data_row_nan:
+        data_row_need_fill = data_nan.loc[row]
+        # 找出空列，并利用非空列做KNN
+        data_col_index = data_row_need_fill.isnull().reset_index()
+        data_col_index.columns = ['col', 'is_null']
+        is_null_col = data_col_index[data_col_index.is_null == 1].col.values
+        data_col_no_nan_index = data_col_index[data_col_index.is_null == 0].col.values
+        # 保存需要填充的行的非空列
+        data_row_fill = data_row_need_fill[data_col_no_nan_index]
+
+        # 广播，矩阵 - 向量
+        data_diff = data_no_nan[data_col_no_nan_index] - data_row_need_fill[data_col_no_nan_index]
+        # 求欧式距离
+        # data_diff = data_diff.apply(lambda x: x**2)
+        data_diff = (data_diff ** 2).sum(axis=1)
+        data_diff = data_diff.apply(lambda x: np.sqrt(x))
+        data_diff = data_diff.reset_index()
+        data_diff.columns = ['raw_row', 'diff_val']
+        data_diff_sum = data_diff.sort_values(by='diff_val', ascending=True)
+        data_diff_sum_sorted = data_diff_sum.reset_index()
+        # 取出K个距离最近的row
+        top_k_diff_row = data_diff_sum_sorted.loc[0:K - 1].raw_row.values
+        # 根据row 和 col值确定需要填充的数据的具体位置（可能是多个）
+        # 填充的数据为最近的K个值的平均值
+        top_k_diff_val = data.loc[top_k_diff_row][is_null_col].sum(axis=0) / K
+
+        # 将计算出来的列添加至非空列
+        data_row_fill = pd.concat([data_row_fill, pd.DataFrame(top_k_diff_val)]).T
+        # print(data_no_nan.shape)
+        data_no_nan = data_no_nan.append(data_row_fill, ignore_index=True)
+        # print(data_no_nan.shape)
+    print('填补缺失值完成')
+    return data_no_nan
+
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
@@ -315,8 +379,8 @@ if __name__ == '__main__':
     print("开始训练:")
     print(x_train.shape, y_train.shape)
     # 寻找L2正则的最优化alpha
-    alpha = find_min_alpha(x_train, y_train)
+    # alpha = find_min_alpha(x_train, y_train)
     # 训练模型
-    train_with_LR_L2(x_train, y_train, x_test, alpha)
+    # train_with_LR_L2(x_train, y_train, x_test, alpha)
     # xgboost 调参
-    # search_cv(x_train, y_train, x_test)
+    search_cv(x_train, y_train, x_test)

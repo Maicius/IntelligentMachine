@@ -23,6 +23,7 @@ print(sorted(offsets, reverse=True))
 print(offsets[0])
 
 x_test = pd.read_csv('half_data/x_test.csv')
+x_test_null = x_test.isnull().sum(axis=0).reset_index()
 print(np.any(np.isnan(x_test)))
 print(np.any(np.isfinite(x_test)))
 
