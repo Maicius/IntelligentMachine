@@ -6,6 +6,7 @@ import numpy as np
 from sklearn import preprocessing
 from sklearn import utils
 
+
 def remove_wrong_row(small_data):
     nan_data1 = small_data.isnull()
     nan_data2 = nan_data1.sum(axis=0)
@@ -37,6 +38,7 @@ def remove_wrong_row(small_data):
     print(wrong_row1)
     wrong_data2 = wrong_data1[wrong_data1 > lower]
     print(small_data.shape)
+
 
 def change_object_to_float(data):
     print(data.shape)
@@ -92,45 +94,70 @@ def stack_data():
     print(Y)
 
 
-def knn_fill_nan(data):
+def knn_fill_nan(data, K):
+    print("raw_data shape:", data.shape)
     col_values = remove_no_float(data)
     data = data[col_values]
+    print("remove no float col shape: ", data.shape)
+
+    # 计算每一行的空值，如有空值则进行填充，没有空值的行用于做训练数据
     data_row = data.isnull().sum(axis=1).reset_index()
-    data_row.columns = ['row', 'nan_count']
-    data_row_nan = data_row[data_row.nan_count > 0].row.values
+    data_row.columns = ['raw_row', 'nan_count']
+    # 空值行（需要填充的行）
+    data_row_nan = data_row[data_row.nan_count > 0].raw_row.values
+
+    # 非空行 原始数据
     data_no_nan = data.drop(data_row_nan, axis=0)
+
+    # 空行 原始数据
     data_nan = data.loc[data_row_nan]
     for row in data_row_nan:
-        # 广播，矩阵 - 向量
-        data_diff = data_no_nan - data_nan.loc[row]
+        data_row_need_fill = data_nan.loc[row]
+        # 找出空列，并利用非空列做KNN
+        data_col_index = data_row_need_fill.isnull().reset_index()
+        data_col_index.columns = ['col', 'is_null']
+        is_null_col = data_col_index[data_col_index.is_null == 1].col.values
+        data_col_no_nan_index = data_col_index[data_col_index.is_null == 0].col.values
+        # 保存需要填充的行的非空列
+        data_row_fill = data_row_need_fill[data_col_no_nan_index]
 
+        # 广播，矩阵 - 向量
+        data_diff = data_no_nan[data_col_no_nan_index] - data_row_need_fill[data_col_no_nan_index]
         # 求欧式距离
         # data_diff = data_diff.apply(lambda x: x**2)
-        data_diff = (data_diff**2).sum(axis=1)
-        data_diff = data_diff.apply(lambda x: np.sqrt(x)).reset_index()
-        data_diff.columns = ['row', 'diff_val']
-        data_diff_sum = data_diff.sort_values(by='diff_val')
+        data_diff = (data_diff ** 2).sum(axis=1)
+        data_diff = data_diff.apply(lambda x: np.sqrt(x))
+        data_diff = data_diff.reset_index()
+        data_diff.columns = ['raw_row', 'diff_val']
+        data_diff_sum = data_diff.sort_values(by='diff_val', ascending=True)
+        data_diff_sum_sorted = data_diff_sum.reset_index()
+        # 取出K个距离最近的row
+        top_k_diff_row = data_diff_sum_sorted.loc[0:K - 1].raw_row.values
+        # 根据row 和 col值确定需要填充的数据的具体位置（可能是多个）
+        # 填充的数据为最近的K个值的平均值
+        top_k_diff_val = data.loc[top_k_diff_row][is_null_col].sum(axis=0) / K
 
-        pass
-    data_col = data_no_nan.isnull().sum(axis=0).reset_index()
-    data_col.columns = ['col', 'nan_count']
-    data_col_no_nan = data_col[data_col.nan_count == 0].col.values
+        # 将计算出来的列添加至非空列
+        data_row_fill = pd.concat([data_row_fill, pd.DataFrame(top_k_diff_val)]).T
+        print(data_no_nan.shape)
+        data_no_nan = data_no_nan.append(data_row_fill, ignore_index=True)
+        print(data_no_nan.shape)
+    return data_no_nan
 
-    no_nan_row = data
-    pass
 
 if __name__ == '__main__':
     small_data = pd.read_excel('small.xlsx')
     print(small_data.shape)
     small_data.drop(['ID'], axis=1, inplace=True)
     # remove_wrong_row(small_data)
-    # small_data = change_object_to_float(small_data)
+    small_data = change_object_to_float(small_data)
     # small_data.fillna(small_data.median(), inplace=True)
-    # small_data = remove_waste_col(small_data)
+    small_data = remove_waste_col(small_data)
     # x_train = small_data.drop(['Y'], axis=1)
     # y_train = small_data['Y']
     # x_train = do_lda(x_train.values, y_train.values)
     small_data = remove_miss_col(small_data)
     small_data = remove_miss_row(small_data)
-    small_data = knn_fill_nan(small_data)
+    small_data = knn_fill_nan(small_data, 9)
+    small_data.to_excel('small_data2.xlsx')
     # stack_data()
