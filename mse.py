@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from main import cal_MSE
 import matplotlib.pyplot as plt
+import scipy as sp
 
 # yesterday = pd.read_csv('result/submitB_A3-0.0265-0.03778.csv', header=None)
 # today = pd.read_csv('result/submitB_A5.csv', header=None)
@@ -39,14 +40,17 @@ def plot_image2(x, y, x_label=None, y_label=None):
     plt.ylabel(y_label)
     plt.show()
 
+
 first = pd.read_csv('result/submitB_A2-0.03620.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
 second = pd.read_csv('result/submitB_A3-0.0245-0.03778.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
-third = pd.read_csv('result/submitB_A5-0.022075-0.04593.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
-fourth = pd.read_csv('result/xgboost-0.0264.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+third = pd.read_csv('result/submitB_A5-0.022075-0.04593.csv', header=None).reset_index().drop([0], axis=1,
+                                                                                              inplace=False)
+fourth = pd.read_csv('result/xgboost-0.0264-0.03771.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
 
-
-plt.plot(first['index'], first[1], 'r')
+# plt.plot(first['index'], first[1], 'r')
 plt.plot(second['index'], second[1], 'black')
 plt.plot(third['index'], third[1], 'g')
-plt.plot(fourth['index'], fourth[1], 'b')
+plt.legend(loc='upper left')
+
+# plt.plot(fourth['index'], fourth[1], 'b')
 plt.show()
