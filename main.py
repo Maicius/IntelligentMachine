@@ -58,7 +58,7 @@ def pre_process_data():
     x_train = calculate_corr(x_train, y_train)
     print('皮尔森系数计算完成:', x_train.shape)
 
-    top_n_feature = ensemble_model_feature(x_train, y_train, 150)
+    top_n_feature = ensemble_model_feature(x_train, y_train, 100)
     # 将训练集的col应用到测试集
     x_train = train_data[top_n_feature]
     x_test = x_test[top_n_feature]
@@ -268,7 +268,7 @@ def search_cv(x_train, y_train, x_test):
     preds = clf.predict(x_test)
     sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
     sub_df['Value'] = preds
-    sub_df.to_csv('result/xgboost3.csv', header=None, index=False)
+    sub_df.to_csv('result/xgboost4.csv', header=None, index=False)
     best_parameters, score, _ = max(clf.grid_scores_, key=lambda x: x[1])
     print('Raw RMSE:', score)
     for param_name in sorted(best_parameters.keys()):
@@ -390,6 +390,7 @@ def ensemble_model_feature(X, Y, top_n_features):
     features_top_n = pd.concat([top_n_features_rf, top_n_features_bgr, top_n_features_etr],
                                ignore_index=True).drop_duplicates()
     print(features_top_n)
+    print(len(features_top_n))
     return features_top_n
 
 
@@ -404,11 +405,11 @@ def get_top_k_feature(features, model, top_n_features):
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
-    x_train, y_train, x_test = pre_process_data()
-    # 保存特征工程的结果到文件
-    x_train.to_csv('half_data/x_train.csv', header=None, index=False)
-    y_train.to_csv('half_data/y_train.csv', header=None, index=False)
-    x_test.to_csv('half_data/x_test.csv', header=None, index=False)
+    # x_train, y_train, x_test = pre_process_data()
+    # # 保存特征工程的结果到文件
+    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
     x_train = pd.read_csv('half_data/x_train.csv', header=None)
     y_train = pd.read_csv('half_data/y_train.csv', header=None)
@@ -425,8 +426,8 @@ if __name__ == '__main__':
     print("开始训练:")
     print(x_train.shape, y_train.shape)
     # 寻找L2正则的最优化alpha
-    # alpha = find_min_alpha(x_train, y_train)
+    alpha = find_min_alpha(x_train, y_train)
     # 训练模型
-    # train_with_LR_L2(x_train, y_train, x_test, alpha)
+    train_with_LR_L2(x_train, y_train, x_test, alpha)
     # xgboost 调参
     search_cv(x_train, y_train, x_test)

@@ -47,10 +47,12 @@ second = pd.read_csv('result/submitB_A3-0.0245-0.03778.csv', header=None).reset_
 third = pd.read_csv('result/submitB_A5-0.022075-0.04593.csv', header=None).reset_index().drop([0], axis=1,
                                                                                               inplace=False)
 fourth = pd.read_csv('result/xgboost-0.0264-0.03771.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+fifth = pd.read_csv('result/xgboost4-0.02437.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+plt.plot(first['index'], first[1], 'r')
+# plt.plot(second['index'], second[1], 'black')
+plt.plot(third['index'], third[1], 'g')
+plt.plot(fifth['index'], fifth[1], 'b')
+# plt.plot(fourth['index'], fourth[1], 'b')
 
-# plt.plot(first['index'], first[1], 'r')
-plt.plot(second['index'], second[1], 'black')
-# plt.plot(third['index'], third[1], 'g')
 plt.legend(loc='upper left')
-plt.plot(fourth['index'], fourth[1], 'b')
 plt.show()
