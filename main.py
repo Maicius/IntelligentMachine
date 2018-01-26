@@ -58,7 +58,7 @@ def pre_process_data():
     x_train = calculate_corr(x_train, y_train)
     print('皮尔森系数计算完成:', x_train.shape)
 
-    top_n_feature = ensemble_model_feature(x_train, y_train, 100)
+    top_n_feature = ensemble_model_feature(x_train, y_train, 75)
     # 将训练集的col应用到测试集
     x_train = train_data[top_n_feature]
     x_test = x_test[top_n_feature]
@@ -79,9 +79,10 @@ def pre_process_data():
 
 def calculate_corr(x_train, y_train):
     corr_df = cal_corrcoef(x_train, y_train)
-    corr02 = corr_df[corr_df.corr_value > 0.1]
+    corr02 = corr_df[corr_df.corr_value >= 0.1]
     corr02_col = corr02['col'].values.tolist()
     return x_train[corr02_col]
+
 
 # 去除缺失值过多的列
 def remove_miss_col(data):
@@ -133,7 +134,7 @@ def change_object_to_float(data):
     return data
 
 
-# 计算协方差 主要降维手段
+# 计算协方差
 def cal_corrcoef(float_df, y_train):
     corr_values = []
     float_col = list(float_df.columns)
@@ -197,24 +198,24 @@ def create_model(x_train, y_train, alpha):
     print("begin to train...")
     model = Ridge(alpha=alpha)
     clf1 = ensemble.BaggingRegressor(model, n_jobs=1, n_estimators=900)
-    clf2 = ensemble.AdaBoostRegressor(n_estimators=900, learning_rate=0.01)
-    clf3 = ensemble.RandomForestRegressor(n_estimators=900)
-    clf4 = ensemble.ExtraTreesRegressor(n_estimators=900)
+    # clf2 = ensemble.AdaBoostRegressor(n_estimators=900, learning_rate=0.01)
+    # clf3 = ensemble.RandomForestRegressor(n_estimators=900)
+    # clf4 = ensemble.ExtraTreesRegressor(n_estimators=900)
     # print("Bagging")
 
     scores = -cross_validation.cross_val_score(model, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
-    scores1 = -cross_validation.cross_val_score(clf1, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
-    scores2 = -cross_validation.cross_val_score(clf2, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
-    scores3 = -cross_validation.cross_val_score(clf3, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
-    scores4 = -cross_validation.cross_val_score(clf4, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    # scores1 = -cross_validation.cross_val_score(clf1, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    # scores2 = -cross_validation.cross_val_score(clf2, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    # scores3 = -cross_validation.cross_val_score(clf3, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
+    # scores4 = -cross_validation.cross_val_score(clf4, x_train, y_train, cv=10, scoring='neg_mean_squared_error')
     #
     print('=========================')
     print('Scores:')
     print(scores.mean())
-    print(scores1.mean())
-    print(scores2.mean())
-    print(scores3.mean())
-    print(scores4.mean())
+    # print(scores1.mean())
+    # print(scores2.mean())
+    # print(scores3.mean())
+    # print(scores4.mean())
     clf1.fit(x_train, y_train)
     print("Finish")
     return clf1
@@ -255,7 +256,7 @@ def search_cv(x_train, y_train, x_test):
     params = {
         'booster': ['gblinear'],
         'silent': [1],
-        'learning_rate': [x for x in np.round(np.linspace(0.01, 0.5, 10), 2)],
+        'learning_rate': [x for x in np.round(np.linspace(0.01, 1, 20), 2)],
         'reg_lambda': [lambd for lambd in np.logspace(0, 3, 50)],
         'objective': ['reg:linear']
     }
@@ -369,20 +370,20 @@ def ensemble_model_feature(X, Y, top_n_features):
 
     # 随机森林
     rf = ensemble.RandomForestRegressor()
-    rf_param_grid = {'n_estimators': [900], 'random_state': [8]}
-    rf_grid = GridSearchCV(rf, rf_param_grid, cv=10, verbose=1, n_jobs=10)
+    rf_param_grid = {'n_estimators': [900], 'random_state': [2, 4, 6, 8]}
+    rf_grid = GridSearchCV(rf, rf_param_grid, cv=10, verbose=1, n_jobs=25)
     rf_grid.fit(X, Y)
     top_n_features_rf = get_top_k_feature(features=features, model=rf_grid, top_n_features=top_n_features)
     print('RF 选择完毕')
     # Adaboost
     abr = ensemble.AdaBoostRegressor()
-    abr_grid = GridSearchCV(abr, rf_param_grid, cv=10, n_jobs=10)
+    abr_grid = GridSearchCV(abr, rf_param_grid, cv=10, n_jobs=25)
     abr_grid.fit(X, Y)
     top_n_features_bgr = get_top_k_feature(features=features, model=abr_grid, top_n_features=top_n_features)
     print('Adaboost 选择完毕')
     # ExtraTree
     etr = ensemble.ExtraTreesRegressor()
-    etr_grid = GridSearchCV(etr, rf_param_grid, cv=10, n_jobs=10)
+    etr_grid = GridSearchCV(etr, rf_param_grid, cv=10, n_jobs=25)
     etr_grid.fit(X, Y)
     top_n_features_etr = get_top_k_feature(features=features, model=etr_grid, top_n_features=top_n_features)
     print('ETR 选择完毕')
@@ -405,11 +406,11 @@ def get_top_k_feature(features, model, top_n_features):
 
 if __name__ == '__main__':
     # 数据预处理，特征工程
-    # x_train, y_train, x_test = pre_process_data()
-    # # 保存特征工程的结果到文件
-    # x_train.to_csv('half_data/x_train.csv', header=None, index=False)
-    # y_train.to_csv('half_data/y_train.csv', header=None, index=False)
-    # x_test.to_csv('half_data/x_test.csv', header=None, index=False)
+    x_train, y_train, x_test = pre_process_data()
+    # 保存特征工程的结果到文件
+    x_train.to_csv('half_data/x_train.csv', header=None, index=False)
+    y_train.to_csv('half_data/y_train.csv', header=None, index=False)
+    x_test.to_csv('half_data/x_test.csv', header=None, index=False)
     # 从文件中读取经过预处理的数据
     x_train = pd.read_csv('half_data/x_train.csv', header=None)
     y_train = pd.read_csv('half_data/y_train.csv', header=None)
