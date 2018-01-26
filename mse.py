@@ -41,17 +41,20 @@ def plot_image2(x, y, x_label=None, y_label=None):
 
 first = pd.read_csv('result/submitB_A2-0.03620.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
 second = pd.read_csv('result/submitB_A3-0.0245-0.03778.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
-third = pd.read_csv('result/submitB_A5-0.022075-0.04593.csv', header=None).reset_index().drop([0], axis=1,
-                                                                                              inplace=False)
+third = pd.read_csv('result/submitB_A5-0.022075-0.04593.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
 fourth = pd.read_csv('result/xgboost-0.0264-0.03771.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
 fifth = pd.read_csv('result/xgboost4-0.02437-0.04045.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
 sixth = pd.read_csv('result/submitB_A6-0.02604.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
 
 ensemble_result = 0.2 * first + 0.2 * second + 0.1 * third + 0.2 * fourth + 0.2 * fifth + 0.1 * sixth
-ensemble_result.to_csv('result/ensemble_submit.csv', header=None)
+# ensemble_result.to_csv('result/ensemble_submit.csv', header=None)
+seventh = pd.read_csv('result/xgboost4-0.02456.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+eighth = pd.read_csv('result/submitB_A6-0.022799.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+
+ensemble_result2 = 0.4 * ensemble_result + 0.3 * seventh + 0.3 * eighth
 
 sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
-sub_df['Value'] = ensemble_result[1]
+sub_df['Value'] = ensemble_result2[1]
 sub_df.to_csv('result/ensemble.csv', header=None, index=False)
 
 plt.plot(first['index'], first[1], 'r')
@@ -60,7 +63,8 @@ plt.plot(first['index'], first[1], 'r')
 # plt.plot(fifth['index'], fifth[1], 'b')
 # plt.plot(sixth['index'], sixth[1], 'k')
 # plt.plot(fourth['index'], fourth[1], 'g')
-plt.plot(ensemble_result['index'], ensemble_result[1], 'b')
+plt.plot(ensemble_result2['index'], ensemble_result2[1], 'b')
+plt.plot(ensemble_result['index'], ensemble_result[1], 'black')
 print(cal_MSE(second[1], fifth[1]))
 plt.legend(loc='upper left')
 plt.show()
