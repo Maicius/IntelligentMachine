@@ -3,8 +3,6 @@
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
-from sklearn.ensemble import RandomForestRegressor
-
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn import cross_validation
 import matplotlib.pyplot as plt
@@ -18,7 +16,7 @@ from sklearn import ensemble
 def pre_process_data():
     print("begin to read data")
     train_data = pd.read_excel('raw_data/训练_20180117.xlsx')
-    x_test = pd.read_excel('raw_data/测试A_20180117.xlsx')
+    x_test = pd.read_excel('raw_data/测试B_20180117.xlsx')
 
     # remove ID column
     train_data.drop(['ID'], axis=1, inplace=True)
@@ -58,7 +56,7 @@ def pre_process_data():
     x_train = calculate_corr(x_train, y_train)
     print('皮尔森系数计算完成:', x_train.shape)
 
-    top_n_feature = ensemble_model_feature(x_train, y_train, 75)
+    top_n_feature = ensemble_model_feature(x_train, y_train, 100)
     # 将训练集的col应用到测试集
     x_train = train_data[top_n_feature]
     x_test = x_test[top_n_feature]
@@ -267,7 +265,7 @@ def search_cv(x_train, y_train, x_test):
 
     clf.fit(x_train, y_train)
     preds = clf.predict(x_test)
-    sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
+    sub_df = pd.read_csv('raw_data/answer_sample_b_20180117.csv', header=None)
     sub_df['Value'] = preds
     sub_df.to_csv('result/xgboost4.csv', header=None, index=False)
     best_parameters, score, _ = max(clf.grid_scores_, key=lambda x: x[1])
@@ -308,9 +306,9 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     print(scores)
     print("mean:" + str(scores.mean()))
     ans = model.predict(x_test)
-    sub_df = pd.read_csv('raw_data/answer_A.csv', header=None)
+    sub_df = pd.read_csv('raw_data/answer_sample_b_20180117.csv', header=None)
     sub_df['Value'] = ans
-    sub_df.to_csv('result/submitB_A6.csv', header=None, index=False)
+    sub_df.to_csv('result/submitB_B6.csv', header=None, index=False)
 
 
 def knn_fill_nan(data, K):
