@@ -4,7 +4,8 @@ import xlrd
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
 from sklearn import preprocessing
-from main import find_min_alpha, train_with_LR_L2
+from main import find_min_alpha, train_with_LR_L2, remove_nan_col
+
 
 #### calculate miss values
 def col_miss(train_df):
@@ -70,7 +71,7 @@ def remove_wrong_row(data, y):
     return data, y
 
 
-if __name__ == '__main__':
+def preprocess():
     # read train data
     print('read train...')
     train_df = pd.read_excel('raw_data/训练_20180117.xlsx')
@@ -119,13 +120,34 @@ if __name__ == '__main__':
     print('get x_train')
     x_train = float_df[corr02_col]
     x_train, y_train = remove_wrong_row(x_train, y_train)
-    x_train = x_train.values
-    y_train = y_train.values
+    # x_train = x_train.values
+    # y_train = y_train.values
     print('get test data...')
     test_df = pd.read_excel('raw_data/测试B_20180117.xlsx')
     sub_test = test_df[corr02_col]
     sub_test.fillna(sub_test.median(), inplace=True)
-    x_test = sub_test.values
+    not_nan_col_val = remove_nan_col(sub_test)
+    x_test = sub_test[not_nan_col_val]
+    x_train = x_train[not_nan_col_val]
+
+    # x_test = sub_test.values
+    x_test_null = x_test.isnull().sum(axis=0).reset_index()
+    print(np.any(np.isnan(x_test)))
+    print(np.any(np.isfinite(x_test)))
+    return x_train, y_train, x_test
+
+
+if __name__ == '__main__':
+    x_train, y_train, x_test = preprocess()
+    # 保存特征工程的结果到文件
+    x_train.to_csv('half_data/x_train2.csv', header=None, index=False)
+    y_train.to_csv('half_data/y_train2.csv', header=None, index=False)
+    x_test.to_csv('half_data/x_tes2t.csv', header=None, index=False)
+    # 从文件中读取经过预处理的数据
+    x_train = pd.read_csv('half_data/x_train2.csv', header=None)
+    y_train = pd.read_csv('half_data/y_train2.csv', header=None)
+    print(x_train.shape, y_train.shape)
+    x_test = pd.read_csv('half_data/x_tes2t.csv', header=None)
 
     print('x_train shape:', x_train.shape)
     print('x_test shape:', x_test.shape)

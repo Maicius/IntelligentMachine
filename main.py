@@ -17,7 +17,10 @@ def pre_process_data():
     print("begin to read data")
     train_data = pd.read_excel('raw_data/训练_20180117.xlsx')
     x_test = pd.read_excel('raw_data/测试B_20180117.xlsx')
-
+    train_data2 = pd.read_excel('raw_data/测试A_20180117.xlsx')
+    print(train_data.shape)
+    train_data = train_data.append(train_data2, ignore_index=True)
+    print(train_data.shape)
     # remove ID column
     train_data.drop(['ID'], axis=1, inplace=True)
     x_test.drop(['ID'], axis=1, inplace=True)
