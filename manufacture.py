@@ -75,7 +75,9 @@ def preprocess():
     # read train data
     print('read train...')
     train_df = pd.read_excel('raw_data/训练_20180117.xlsx')
-
+    train_data2 = pd.read_excel('raw_data/测试A_20180117.xlsx')
+    print(train_df.shape)
+    train_df = train_df.append(train_data2, ignore_index=True)
     print('train shape:', train_df.shape)
     # calculate the number of miss values
     col_missing_df = col_miss(train_df)

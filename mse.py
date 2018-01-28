@@ -79,6 +79,15 @@ def ensemble_submit():
     sub_df['Value'] = ensemble_result[1]
     sub_df.to_csv('result/ensembleB.csv', header=None, index=False)
 
+def ensemble_last():
+    ridge1 = pd.read_csv('result/submitB_B8.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    ridge2 = pd.read_csv('result/submitB_B7-0.0224.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    xgboost1 = pd.read_csv('result/submitB_B7-0.0248.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    xgboost2 = pd.read_csv('result/xgboost4-0.02576.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    ensemble_result = 0.2 * ridge1 + ridge2 * 0.3 + xgboost1 * 0.2 + xgboost2 * 0.3
+    sub_df = pd.read_csv('raw_data/answer_sample_b_20180117.csv', header=None)
+    sub_df['Value'] = ensemble_result[1]
+    sub_df.to_csv('result/ensembleB2.csv', header=None, index=False)
 
 if __name__ == '__main__':
-    ensemble_submit()
+    ensemble_last()
