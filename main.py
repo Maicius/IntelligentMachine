@@ -308,7 +308,7 @@ def train_with_LR_L2(x_train, y_train, x_test, alpha):
     ans = model.predict(x_test)
     sub_df = pd.read_csv('raw_data/answer_sample_b_20180117.csv', header=None)
     sub_df['Value'] = ans
-    sub_df.to_csv('result/submitB_B6.csv', header=None, index=False)
+    sub_df.to_csv('result/submitB_B7.csv', header=None, index=False)
 
 
 def knn_fill_nan(data, K):

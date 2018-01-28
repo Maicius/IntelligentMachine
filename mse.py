@@ -68,3 +68,17 @@ plt.plot(ensemble_result['index'], ensemble_result[1], 'black')
 print(cal_MSE(second[1], fifth[1]))
 plt.legend(loc='upper left')
 plt.show()
+
+def ensemble_submit():
+    ridge1 = pd.read_csv('result/submitB_B6-0.02264.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    ridge2 = pd.read_csv('result/submitB_B6-0.02287.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    xgboost1 = pd.read_csv('result/xgboost4-0.02485.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    xgboost2 = pd.read_csv('result/xgboost4-0.0247.csv', header=None).reset_index().drop([0], axis=1, inplace=False)
+    ensemble_result = 0.2 * ridge1 + ridge2 * 0.3 + xgboost1 * 0.2 + xgboost2 * 0.3
+    sub_df = pd.read_csv('raw_data/answer_sample_b_20180117.csv', header=None)
+    sub_df['Value'] = ensemble_result[1]
+    sub_df.to_csv('result/ensembleB.csv', header=None, index=False)
+
+
+if __name__ == '__main__':
+    ensemble_submit()
