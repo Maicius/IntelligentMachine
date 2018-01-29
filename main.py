@@ -3,12 +3,12 @@
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
-from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.linear_model import Ridge
 from sklearn import cross_validation
 import matplotlib.pyplot as plt
 import xgboost as xgb
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.model_selection import GridSearchCV, cross_val_score, ShuffleSplit
+from sklearn.model_selection import GridSearchCV
 from sklearn import utils
 from sklearn import ensemble
 

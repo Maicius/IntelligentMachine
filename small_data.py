@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from main import remove_waste_col, remove_miss_row, remove_miss_col, remove_no_float, knn_fill_nan, ensemble_model_feature
+from main import remove_waste_col, remove_miss_row, remove_miss_col, knn_fill_nan, ensemble_model_feature
 from main import remove_no_float
 import numpy as np
 from sklearn import preprocessing
@@ -94,7 +94,7 @@ def stack_data():
     print(Y)
 
 if __name__ == '__main__':
-    small_data = pd.read_excel('small.xlsx')
+    small_data = pd.read_excel('raw_data/small.xlsx')
     print(small_data.shape)
 
     small_data.drop(['ID'], axis=1, inplace=True)

@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from main import cal_MSE
 import matplotlib.pyplot as plt
-import scipy as sp
 
 # yesterday = pd.read_csv('result/submitB_A3-0.0265-0.03778.csv', header=None)
 # today = pd.read_csv('result/submitB_A5.csv', header=None)
